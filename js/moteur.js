@@ -58,6 +58,9 @@
       // Canton B -> aval
       annonceEmise: false,        // B a annoncé le train à l'aval, voie libre pas encore reçue
       sonnerieReddition: false,
+      // Sonneries chez les postes voisins (pupitres du formateur)
+      sonnerieAmont: false,       // l'amont reçoit la voie libre rendue par B
+      sonnerieAval: false,        // l'aval reçoit l'annonce de B
       // Sémaphore d'entrée du canton aval
       sema: {
         manette: 'ferme',         // position du commutateur : 'ferme' | 'ouvert'
@@ -112,6 +115,15 @@
         return ok(`${p.amont} annonce un train à Bravo (${a.voie})`);
       },
 
+      AMONT_ARRET_SONNERIE(v, a) {
+        v.sonnerieAmont = false;
+        return ok(`${POSTES[a.voie].amont} arrête sa sonnerie (${a.voie})`);
+      },
+      AVAL_ARRET_SONNERIE(v, a) {
+        v.sonnerieAval = false;
+        return ok(`${POSTES[a.voie].aval} arrête sa sonnerie (${a.voie})`);
+      },
+
       // ---------- Poste aval (joué par le formateur) ----------
       AVAL_REDDITION(v, a) {
         const p = POSTES[a.voie];
@@ -161,6 +173,7 @@
         const p = POSTES[a.voie];
         if (v.annonceEmise) return sansEffet(`Bravo : annonce sans effet, voie libre non reçue de ${p.aval}`);
         v.annonceEmise = true;
+        v.sonnerieAval = true;
         v.sema.bloque = true;
         return ok(`Bravo annonce le train à ${p.aval} (${a.voie})`);
       },
@@ -180,6 +193,7 @@
         }
         v.annonceRecue = false;
         v.arriveeSansAnnonce = false;
+        v.sonnerieAmont = true;
         return ok(`Bravo rend voie libre à ${p.amont} (${a.voie})`);
       },
     };
@@ -216,6 +230,8 @@
       });
       if (!auto) return;
       Object.entries(etat.voies).forEach(([voie, v]) => {
+        v.sonnerieAmont = false; // les postes automatiques arrêtent leurs sonneries
+        v.sonnerieAval = false;
         if (!(v.arrivesAval > 0 && v.annonceEmise)) { v.delaiReddition = null; return; }
         if (v.delaiReddition == null) v.delaiReddition = DELAI_REDDITION_AUTO;
         v.delaiReddition -= dt;

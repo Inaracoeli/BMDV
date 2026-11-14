@@ -31,10 +31,14 @@ function essai(nom, f) {
     assert.strictEqual(v().sema.manette, 'ferme');
 
     assert.ok(agir('B_ANNONCE').ok);
-    assert.ok(v().annonceEmise);
+    assert.ok(v().annonceEmise && v().sonnerieAval);
+    agir('AVAL_ARRET_SONNERIE');
+    assert.ok(!v().sonnerieAval);
     assert.ok(!agir('B_REDDITION').ok); // sans la sonnerie : sans effet
     assert.ok(agir('B_REDDITION', { sonnerieAppuyee: true }).ok);
-    assert.ok(!v().annonceRecue);
+    assert.ok(!v().annonceRecue && v().sonnerieAmont);
+    agir('AMONT_ARRET_SONNERIE');
+    assert.ok(!v().sonnerieAmont);
 
     // Sémaphore bloqué tant que l'aval n'a pas rendu voie libre
     assert.ok(!agir('B_SEMAPHORE').ok);

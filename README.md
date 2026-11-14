@@ -11,14 +11,23 @@ la base de données, accessible uniquement après authentification.
 
 | Fichier | Rôle |
 |---|---|
-| `tco.html` | TCO du poste B (écran élève) |
-| `css/tco.css` | Styles et états lumineux du TCO |
-| `js/moteur.js` | Moteur du block : état et règles, sans dépendance au navigateur |
+| `tco.html` | TCO du poste B (écran élève). Héberge le moteur. |
+| `formateur.html` | Écran formateur, pour téléphone : pupitres d'Alfa et de Charlie, trains, dérangements |
+| `css/tco.css`, `css/formateur.css` | Styles des deux écrans |
+| `js/moteur.js` | Moteur : block, trains, enclenchements. Sans dépendance au navigateur. |
 | `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
-| `js/sonnerie.js` | Sonneries d'annonce et de reddition, synthétisées |
+| `js/poste.js` | Démarrage de la page du TCO : moteur, horloge, liaison |
+| `js/liaison.js` | Échange d'état et d'actions entre le TCO et l'écran formateur |
+| `js/formateur.js` | Écran formateur |
+| `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
 | `js/guide.js` | Mini guide « Faire circuler un train », ouvert par le bouton GUIDE |
-| `js/panneau-provisoire.js` | Panneau formateur provisoire (joue Alfa, Charlie et les trains) |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
+
+## Utilisation
+
+Ouvrir `tco.html` et `formateur.html` dans deux onglets du même navigateur, servis par un serveur web
+(par exemple `python3 -m http.server`, puis `http://localhost:8000/tco.html`). La liaison entre appareils
+différents viendra à l'étape 5.
 
 ## Nomenclature des éléments
 
@@ -44,6 +53,6 @@ Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une s
 - [x] Étape 1 — TCO statique
 - [x] Étape 2 — Moteur de block (sans réseau)
 - [x] Étape 3 — Circulation des trains
-- [ ] Étape 4 — Écran formateur
+- [x] Étape 4 — Écran formateur (même navigateur)
 - [ ] Étape 5 — Synchronisation temps réel et authentification
 - [ ] Étape 6 — Scénarios et dérangements

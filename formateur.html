@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BMDV — Formateur</title>
+<link rel="stylesheet" href="css/formateur.css">
+</head>
+<body>
+
+<!--
+  Écran formateur, pensé pour un téléphone tenu à la verticale.
+  Il ne contient pas le moteur : il affiche l'état reçu du TCO et lui
+  envoie des actions (js/liaison.js). Trois onglets : Postes, Trains, Dérangements.
+-->
+
+<header>
+  <div class="titre">BMDV <span>Formateur</span></div>
+  <div id="liaison" class="hors-ligne">TCO non connecté</div>
+</header>
+<div id="journal">Ouvrez le TCO dans un autre onglet de ce navigateur.</div>
+
+<main>
+  <section id="onglet-postes" class="actif">
+    <label class="interrupteur"><input type="checkbox" id="auto"> <span>Alfa et Charlie automatiques</span></label>
+    <div id="pupitres"></div>
+  </section>
+
+  <section id="onglet-trains">
+    <form id="nouveau-train" class="carte">
+      <h2>Nouveau train</h2>
+      <div class="champs">
+        <label>Numéro <input id="numero-train" type="text" inputmode="numeric" placeholder="auto" autocomplete="off"></label>
+        <label>Vitesse <select id="vitesse-train"></select></label>
+        <label>De <select id="origine-train"></select></label>
+        <label>À <select id="destination-train"></select></label>
+      </div>
+      <button type="submit" class="principal">Lancer le train</button>
+    </form>
+    <div id="trains"></div>
+    <details class="carte">
+      <summary>Durées de parcours (secondes, à vitesse normale)</summary>
+      <div id="durees" class="champs"></div>
+    </details>
+  </section>
+
+  <section id="onglet-derangements">
+    <div class="carte">
+      <h2>Enclenchements</h2>
+      <p class="aide">Décocher un enclenchement le lève : le block ne s'oppose plus à la manœuvre.</p>
+      <div id="enclenchements"></div>
+    </div>
+    <div class="carte">
+      <h2>Incidents</h2>
+      <div id="incidents" class="boutons"></div>
+    </div>
+    <div class="carte">
+      <h2>Séance</h2>
+      <label class="interrupteur"><input type="checkbox" id="aide-reddition"> <span>Aide à l'élève : Sonnerie clignote si Reddition est pressée seule</span></label>
+      <button id="reinitialiser" class="danger">Réinitialiser le simulateur</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-onglet="postes" class="actif">Postes</button>
+  <button data-onglet="trains">Trains <span id="nb-trains"></span></button>
+  <button data-onglet="derangements">Dérangements</button>
+</nav>
+
+<script src="js/moteur.js"></script>
+<script src="js/liaison.js"></script>
+<script src="js/formateur.js"></script>
+</body>
+</html>
