@@ -78,7 +78,65 @@ const Sonnerie = (function () {
     s.source.stop(ctx.currentTime + 0.4);
   }
 
+  // Clic sec d'un voyant électromécanique qui bascule
+  let tamponClic = null;
+  function clic() {
+    try {
+      contexte();
+      if (!tamponClic) {
+        const sr = ctx.sampleRate;
+        const n = Math.round(0.07 * sr);
+        tamponClic = ctx.createBuffer(1, n, sr);
+        const d = tamponClic.getChannelData(0);
+        let precedent = 0;
+        for (let i = 0; i < n; i++) {
+          const t = i / sr;
+          const bruit = Math.random() * 2 - 1;
+          const sec = (bruit - precedent) * Math.exp(-t * 320);                 // claquement
+          const sourd = Math.sin(2 * Math.PI * 170 * t) * Math.exp(-t * 70);    // corps du relais
+          precedent = bruit;
+          d[i] = 0.7 * sec + 0.6 * sourd;
+        }
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = tamponClic;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.5;
+      source.connect(gain).connect(ctx.destination);
+      source.start();
+    } catch (e) { /* pas de son disponible */ }
+  }
+
+  // Gong d'annonce : aigu et bref, à l'entrée d'un train en zone d'annonce
+  let tamponGong = null;
+  function gong() {
+    try {
+      contexte();
+      if (!tamponGong) {
+        const sr = ctx.sampleRate;
+        const n = Math.round(0.9 * sr);
+        tamponGong = ctx.createBuffer(1, n, sr);
+        const d = tamponGong.getChannelData(0);
+        const partiels = [[1320, 1, 6], [2640, 0.35, 9], [3565, 0.3, 11], [5410, 0.15, 16]];
+        for (let i = 0; i < n; i++) {
+          const t = i / sr;
+          let s = 0;
+          for (const [f, niveau, amorti] of partiels) s += niveau * Math.sin(2 * Math.PI * f * t) * Math.exp(-t * amorti);
+          d[i] = 0.5 * s * Math.min(1, t / 0.002);
+        }
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = tamponGong;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.45;
+      source.connect(gain).connect(ctx.destination);
+      source.start();
+    } catch (e) { /* pas de son disponible */ }
+  }
+
   return {
+    clic,
+    gong,
     // regler({ annonce: true|false, reddition: true|false })
     regler(voulu) {
       Object.keys(TIMBRES).forEach((nom) => (voulu[nom] ? demarrer(nom) : arreter(nom)));

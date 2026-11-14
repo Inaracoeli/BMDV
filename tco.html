@@ -21,7 +21,8 @@
   manette en haut = inactif (ouvert / A), éteint.
   Les zones portent aussi data-zone : z1 et z2 ont chacune deux contrôles
   (T_V_Z1 + T_V_Z1B, T_V_Z2 + T_V_Z2B).
-  Les composants répétés (c-btn, c-lamp, c-zone, c-tile, c-tpl...) sont définis
+  Les voyants du point E (classe volet) sont électromécaniques, dans un boîtier en fonte : un volet rouge tombe
+  ou remonte (data-etat="rouge"), sans halo. Les composants répétés (c-btn, c-lamp, c-zone, c-tpl...) sont définis
   une fois dans <defs> et colorés par les variables CSS --face / --glow / --lit.
 -->
 
@@ -95,14 +96,18 @@
       <rect width="68" height="22" rx="2.5" fill="url(#g-reflet)"/>
     </g>
 
-    <!-- Case lumineuse de la console (origine en haut à gauche, 46 x 50) -->
-    <g id="c-tile">
-      <rect x="-3" y="-3" width="52" height="56" rx="7" filter="url(#flou)" style="fill:var(--face);opacity:var(--glow,0)"/>
-      <rect x="-2" y="-2" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
-      <rect width="46" height="50" rx="2.5" style="fill:var(--face,#33363b)"/>
-      <rect width="46" height="50" rx="2.5" fill="url(#g-reflet)"/>
-      <rect y="50" width="46" height="16" rx="1.5" fill="#f4f4ee"/>
-    </g>
+    <!-- Voyants électromécaniques du point E : vitre terne et stries du voyant de carré -->
+    <linearGradient id="g-vitre" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset=".25" stop-color="#000" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".16"/>
+    </linearGradient>
+    <pattern id="p-stries" width="7" height="23" patternUnits="userSpaceOnUse">
+      <rect width="7" height="23" fill="#d6d2c4"/><rect x="2" width="3" height="23" fill="#1d1f22"/>
+    </pattern>
+    <!-- Boîtier en fonte des voyants électromécaniques -->
+    <linearGradient id="g-fonte" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a3a8ad"/><stop offset=".5" stop-color="#858a90"/><stop offset="1" stop-color="#6a6f75"/>
+    </linearGradient>
 
     <!-- Commutateur lumineux TPL : corps (centré) -->
     <g id="c-tpl">
@@ -361,15 +366,103 @@
     <path d="M1172 572 q-12 0 -12 12 v76 q0 8 -10 10 q10 2 10 10 v64 q0 12 12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
     <path d="M1690 572 q12 0 12 12 v76 q0 8 10 10 q-10 2 -10 10 v64 q0 12 -12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
 
-    <g id="E_V_ZAP1" class="tile"><title>E_V_ZAP1 — ZAP C1</title><use href="#c-tile" x="1186" y="578"/><text class="lbl-tile" x="1209" y="640">ZAP C1</text></g>
-    <g id="E_V_EAP1" class="tile"><title>E_V_EAP1 — EAP C1</title><use href="#c-tile" x="1241" y="578"/><text class="lbl-tile" x="1264" y="640">EAP C1</text></g>
-    <g id="E_V_C1" class="tile"><title>E_V_C1 — K C1</title><use href="#c-tile" x="1296" y="578"/><text class="lbl-tile" x="1319" y="640">K C1</text></g>
-    <g id="E_V_Z1" class="tile"><title>E_V_Z1 — Z1</title><use href="#c-tile" x="1351" y="578"/><text class="lbl-tile" x="1374" y="640">Z1</text></g>
+    <g id="E_V_ZAP1" class="volet"><title>E_V_ZAP1 — ZAP C1</title>
+      <rect x="1184" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1185.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1193" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1196 579.4 h26 M1199 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1191" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1194" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1195" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1188" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1209" y="630">ZAP</text><text class="lbl-kan" x="1209" y="639.5">C1</text>
+      <g fill="#3a3e43"><circle cx="1197" cy="646" r="1.6"/><circle cx="1209" cy="646" r="1.6"/><circle cx="1221" cy="646" r="1.6"/></g></g>
+    <g id="E_V_EAP1" class="volet"><title>E_V_EAP1 — EAP C1</title>
+      <rect x="1239" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1240.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1248" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1251 579.4 h26 M1254 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1246" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1249" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1250" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1243" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1264" y="630">EAP</text><text class="lbl-kan" x="1264" y="639.5">C1</text>
+      <g fill="#3a3e43"><circle cx="1252" cy="646" r="1.6"/><circle cx="1264" cy="646" r="1.6"/><circle cx="1276" cy="646" r="1.6"/></g></g>
+    <g id="E_V_C1" class="volet"><title>E_V_C1 — K C1</title>
+      <rect x="1294" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1295.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1303" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1306 579.4 h26 M1309 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1301" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1304" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1305" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" fill="url(#p-stries)"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1298" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1319" y="630">K</text><text class="lbl-kan" x="1319" y="639.5">C1</text>
+      <g fill="#3a3e43"><circle cx="1307" cy="646" r="1.6"/><circle cx="1319" cy="646" r="1.6"/><circle cx="1331" cy="646" r="1.6"/></g></g>
+    <g id="E_V_Z1" class="volet"><title>E_V_Z1 — Z1</title>
+      <rect x="1349" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1350.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1358" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1361 579.4 h26 M1364 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1356" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1359" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1360" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1353" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1374" y="635.5" style="font-size:11px">Z1</text>
+      <g fill="#3a3e43"><circle cx="1362" cy="646" r="1.6"/><circle cx="1374" cy="646" r="1.6"/><circle cx="1386" cy="646" r="1.6"/></g></g>
 
-    <g id="E_V_Z2" class="tile"><title>E_V_Z2 — Z2</title><use href="#c-tile" x="1463" y="578"/><text class="lbl-tile" x="1486" y="640">Z2</text></g>
-    <g id="E_V_C2" class="tile"><title>E_V_C2 — K C2</title><use href="#c-tile" x="1518" y="578"/><text class="lbl-tile" x="1541" y="640">K C2</text></g>
-    <g id="E_V_EAP2" class="tile"><title>E_V_EAP2 — EAP C2</title><use href="#c-tile" x="1573" y="578"/><text class="lbl-tile" x="1596" y="640">EAP C2</text></g>
-    <g id="E_V_ZAP2" class="tile"><title>E_V_ZAP2 — ZAP C2</title><use href="#c-tile" x="1628" y="578"/><text class="lbl-tile" x="1651" y="640">ZAP C2</text></g>
+    <g id="E_V_Z2" class="volet"><title>E_V_Z2 — Z2</title>
+      <rect x="1461" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1462.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1470" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1473 579.4 h26 M1476 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1468" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1471" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1472" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1465" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1486" y="635.5" style="font-size:11px">Z2</text>
+      <g fill="#3a3e43"><circle cx="1474" cy="646" r="1.6"/><circle cx="1486" cy="646" r="1.6"/><circle cx="1498" cy="646" r="1.6"/></g></g>
+    <g id="E_V_C2" class="volet"><title>E_V_C2 — K C2</title>
+      <rect x="1516" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1517.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1525" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1528 579.4 h26 M1531 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1523" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1526" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1527" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" fill="url(#p-stries)"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1520" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1541" y="630">K</text><text class="lbl-kan" x="1541" y="639.5">C2</text>
+      <g fill="#3a3e43"><circle cx="1529" cy="646" r="1.6"/><circle cx="1541" cy="646" r="1.6"/><circle cx="1553" cy="646" r="1.6"/></g></g>
+    <g id="E_V_EAP2" class="volet"><title>E_V_EAP2 — EAP C2</title>
+      <rect x="1571" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1572.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1580" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1583 579.4 h26 M1586 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1578" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1581" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1582" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1575" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1596" y="630">EAP</text><text class="lbl-kan" x="1596" y="639.5">C2</text>
+      <g fill="#3a3e43"><circle cx="1584" cy="646" r="1.6"/><circle cx="1596" cy="646" r="1.6"/><circle cx="1608" cy="646" r="1.6"/></g></g>
+    <g id="E_V_ZAP2" class="volet"><title>E_V_ZAP2 — ZAP C2</title>
+      <rect x="1626" y="574" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1627.5" y="575.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1635" y="577.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1638 579.4 h26 M1641 581.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1633" y="586" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1636" y="589" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1637" y="590" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1630" y="620.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1651" y="630">ZAP</text><text class="lbl-kan" x="1651" y="639.5">C2</text>
+      <g fill="#3a3e43"><circle cx="1639" cy="646" r="1.6"/><circle cx="1651" cy="646" r="1.6"/><circle cx="1663" cy="646" r="1.6"/></g></g>
 
     <!-- Chaîne clé E — Vcm1 — Au E — Vcm2 — clé F -->
     <g stroke="#3a3e43" stroke-width="2" stroke-dasharray="2 4" fill="none">
@@ -400,7 +493,18 @@
       <circle cx="1319" cy="680" r="4" fill="url(#g-chrome)" stroke="#33373c"/>
       <rect x="1296" y="724" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1319" y="736">Vcm 1</text></g>
 
-    <g id="E_V_AUE" class="tile"><title>E_V_AUE — Au E</title><use href="#c-tile" x="1410" y="674"/><text class="lbl-tile" x="1433" y="736">Au E</text></g>
+    <g id="E_V_AUE" class="volet"><title>E_V_AUE — Au E</title>
+      <rect x="1408" y="670" width="50" height="76" rx="5" fill="url(#g-fonte)" stroke="#2a2d31" stroke-width="1.2" filter="url(#ombre)"/>
+      <rect x="1409.5" y="671.5" width="47" height="73" rx="4" fill="none" stroke="#fff" stroke-opacity=".28"/>
+      <rect x="1417" y="673.5" width="32" height="5.5" rx="1" fill="#2f3338"/><path d="M1420 675.4 h26 M1423 677.4 h20" stroke="#b9bcc0" stroke-width=".7"/>
+      <rect x="1415" y="682" width="36" height="31" rx="4" fill="#565b61" stroke="#2a2d31"/>
+      <rect x="1418" y="685" width="30" height="25" rx="2" fill="#17191c"/>
+      <svg x="1419" y="686" width="28" height="23"><g class="lame">
+        <rect y="-33" width="28" height="33" class="face-rouge"/><rect width="28" height="23" class="face-repos"/>
+        <line y1="0" x2="28" y2="0" class="arete"/></g>
+        <rect width="28" height="23" fill="url(#g-vitre)"/></svg>
+      <rect x="1412" y="716.5" width="42" height="22" rx="1.5" fill="#efeee8" stroke="#2a2d31" stroke-width=".8"/><text class="lbl-kan" x="1433" y="731.5" style="font-size:11px">Au E</text>
+      <g fill="#3a3e43"><circle cx="1421" cy="742" r="1.6"/><circle cx="1433" cy="742" r="1.6"/><circle cx="1445" cy="742" r="1.6"/></g></g>
 
     <g id="E_B_VCM2" class="vcm interactif" data-pos="F"><title>E_B_VCM2 — Vcm 2 (levier vers F ou O)</title>
       <rect x="1516" y="670" width="50" height="72" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
@@ -422,6 +526,8 @@
 <!-- Panneau formateur provisoire (étape 2) : joue Alfa, Charlie et le train -->
 <div id="panneau-provisoire">
   <div class="voies"></div>
+  <div class="trains"></div>
+  <div class="durees"></div>
   <div class="enclenchements"><strong>Enclenchements</strong></div>
   <div id="journal">Prêt.</div>
 </div>

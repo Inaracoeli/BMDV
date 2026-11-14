@@ -17,7 +17,7 @@ la base de données, accessible uniquement après authentification.
 | `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
 | `js/sonnerie.js` | Sonneries d'annonce et de reddition, synthétisées |
 | `js/guide.js` | Mini guide « Faire circuler un train », ouvert par le bouton GUIDE |
-| `js/panneau-provisoire.js` | Panneau formateur provisoire (joue Alfa, Charlie et le train) |
+| `js/panneau-provisoire.js` | Panneau formateur provisoire (joue Alfa, Charlie et les trains) |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 
 ## Nomenclature des éléments
@@ -43,7 +43,7 @@ Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une s
 
 - [x] Étape 1 — TCO statique
 - [x] Étape 2 — Moteur de block (sans réseau)
-- [ ] Étape 3 — Circulation des trains
+- [x] Étape 3 — Circulation des trains
 - [ ] Étape 4 — Écran formateur
 - [ ] Étape 5 — Synchronisation temps réel et authentification
 - [ ] Étape 6 — Scénarios et dérangements

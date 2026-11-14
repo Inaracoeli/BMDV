@@ -10,16 +10,34 @@ const TCO = (function () {
       reddition: 'A_B_RED', sonnerieAnnonce: 'A_B_SN1',
       annonce: 'C_B_ANN', voieLibre: 'C_V_VL', sonnerieReddition: 'C_B_SN1',
       commutateur: 'A_C_S1', voyantSemaphore: 'A_V_S1', voyantAnnonce: 'T_V_AN1',
+      zoneA: ['T_V_Z1', 'T_V_Z1B'], zoneB: ['T_V_Z3'],
+      voletApproche: 'E_V_ZAP1', voletEap: 'E_V_EAP1', voletZone: 'E_V_Z1',
+      voletCarre: 'E_V_C1', voyantCarre: 'T_V_C1',
+      saatAnnonce: 'SAAT_AN1', saatCarre: 'SAAT_C1',
     },
     V2: {
       reddition: 'C_B_RED', sonnerieAnnonce: 'C_B_SN2',
       annonce: 'A_B_ANN', voieLibre: 'A_V_VL', sonnerieReddition: 'A_B_SN2',
       commutateur: 'C_C_S2', voyantSemaphore: 'C_V_S2', voyantAnnonce: 'T_V_AN2',
+      zoneA: ['T_V_Z2', 'T_V_Z2B'], zoneB: ['T_V_Z4'],
+      voletApproche: 'E_V_ZAP2', voletEap: 'E_V_EAP2', voletZone: 'E_V_Z2',
+      voletCarre: 'E_V_C2', voyantCarre: 'T_V_C2',
+      saatAnnonce: 'SAAT_AN2', saatCarre: 'SAAT_C2',
     },
   };
 
   const el = (id) => document.getElementById(id);
   const allumer = (id, couleur) => { el(id).dataset.etat = couleur || ''; };
+
+  // Voyant électromécanique : le volet rouge tombe ou remonte, avec un clic
+  let premierAffichage = true;
+  function basculer(id, rouge) {
+    const e = el(id);
+    const voulu = rouge ? 'rouge' : '';
+    if ((e.dataset.etat || '') === voulu) return;
+    e.dataset.etat = voulu;
+    if (!premierAffichage) Sonnerie.clic();
+  }
 
   function afficher(etat) {
     let sonneAnnonce = false;
@@ -29,10 +47,26 @@ const TCO = (function () {
       const v = etat.voies[voie];
       allumer(c.reddition, v.annonceRecue && 'jaune');
       allumer(c.sonnerieAnnonce, v.sonnerieAnnonce && 'blanc');
+      // L'anneau de l'action simultanée n'apparaît que si une reddition est possible :
+      // train annoncé et passé chez nous. Sinon un simple appui arrête la sonnerie.
+      el(c.sonnerieAnnonce).classList.toggle('reddition-possible', v.annonceRecue && v.sema.bloque);
       allumer(c.annonce, v.annonceEmise && 'rouge');
       allumer(c.voieLibre, !v.annonceEmise && 'blanc');
       allumer(c.sonnerieReddition, v.sonnerieReddition && 'blanc');
-      allumer(c.voyantAnnonce, v.approche && 'jaune');
+      // Occupation par les trains : annonce, zone d'approche, zones, SAAT
+      const o = Moteur.occupation(etat, voie);
+      // Un gong appuie l'allumage du voyant d'annonce
+      if (o.annonce && !el(c.voyantAnnonce).dataset.etat && !premierAffichage) Sonnerie.gong();
+      allumer(c.voyantAnnonce, o.annonce && 'jaune');
+      basculer(c.voletApproche, o.approche);
+      basculer(c.voletEap, o.eap);
+      basculer(c.voletCarre, v.carre.ferme);
+      allumer(c.voyantCarre, v.carre.ferme && 'rouge');
+      basculer(c.voletZone, o.zoneA);
+      c.zoneA.forEach((id) => allumer(id, o.zoneA && 'rouge'));
+      c.zoneB.forEach((id) => allumer(id, o.zoneB && 'rouge'));
+      el(c.saatAnnonce).querySelector('text').textContent = o.saatAnnonce;
+      el(c.saatCarre).querySelector('text').textContent = o.saatCarre;
       // Le voyant contrôle l'état réel du sémaphore ; le TPL ne suit que sa manette
       allumer(c.voyantSemaphore, !v.sema.ouvert && 'rouge');
       el(c.commutateur).dataset.pos = v.sema.manette;
@@ -47,6 +81,7 @@ const TCO = (function () {
     el('E_B_VCM2').dataset.pos = etat.vcm[2];
 
     Sonnerie.regler({ annonce: sonneAnnonce, reddition: sonneReddition });
+    premierAffichage = false;
   }
 
   // Durée pendant laquelle un bouton relâché reste considéré comme appuyé :
