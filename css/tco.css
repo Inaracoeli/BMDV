@@ -44,8 +44,8 @@ html, body {
 .lbl-voie   { font-weight: 700; font-size: 46px; fill: #3a3e43; text-anchor: middle; }
 .lbl-zone   { font-weight: 700; font-size: 23px; fill: var(--vert-zone); text-anchor: middle; }
 .lbl-ef     { font-weight: 700; font-size: 32px; fill: #e8891c; text-anchor: middle; }
-.lbl-saat   { font-weight: 700; font-size: 11px; fill: var(--saat); letter-spacing: .5px; }
-.lbl-saat-v { font: 700 16px "Courier New", monospace; fill: #0d2a55; text-anchor: middle; letter-spacing: 2px; }
+.lbl-saat   { font-weight: 700; font-size: 11px; fill: #7fd3ff; letter-spacing: 1px; }
+.lbl-saat-v { font: 700 16px "Courier New", monospace; fill: #07090b; text-anchor: middle; letter-spacing: 2px; }
 .lbl-tile   { font-weight: 700; font-size: 9.5px; fill: #111; text-anchor: middle; }
 
 /* ---------- États lumineux ----------
@@ -66,26 +66,27 @@ html, body {
 [data-etat="vert"]  { --face: var(--vert);  --glow: .85; }
 
 /* ---------- Commutateurs lumineux (TPL) ----------
-   Éteint : dôme neutre. data-etat="rouge" : dôme allumé au rouge
+   Éteint : dôme neutre. data-etat="rouge" : commutateur allumé au rouge
    (sémaphore fermé, Au E sur I). */
 .commut { --lit: 0; }
 .commut[data-etat="rouge"] { --lit: 1; }
 .commut .manette { transition: transform .2s; }
-/* Sémaphores : manette vers le haut = fermé, vers le bas = ouvert */
-.commut[data-pos="ouvert"] .manette { transform: rotate(180deg); }
-/* Au E : manette vers le haut = I, vers le bas = A */
-.commut[data-pos="A"] .manette { transform: rotate(180deg); }
+/* Manette en bas = actif (allumé rouge), en haut = inactif (éteint).
+   Sémaphores : bas = fermé, haut = ouvert. Au E : bas = I, haut = A. */
+.commut[data-pos="ferme"] .manette,
+.commut[data-pos="I"] .manette { transform: rotate(180deg); }
 
 /* ---------- Vcm (point E) ---------- */
-.vcm .pt { transition: transform .2s; }
-.vcm[data-pos="O"] .pt { transform: translateX(28px); }
+/* Levier incliné vers F (à gauche) ou vers O (à droite) */
+.vcm .levier { transition: transform .2s; transform: rotate(-30deg); }
+.vcm[data-pos="O"] .levier { transform: rotate(30deg); }
 
 /* ---------- Bulletins (C / S / MV) ---------- */
 .bulletin path { fill: #fff; stroke: #3a3e43; stroke-width: 1.5; stroke-linejoin: round; }
 .bulletin[data-etat="actif"] path { fill: var(--jaune); }
 
 /* ---------- Afficheurs SAAT ---------- */
-.saat rect { fill: #eef4ff; stroke: #5b86d6; stroke-width: 1.5; }
+.saat rect { fill: #e9eef4; }
 
 /* ---------- Interaction ---------- */
 .interactif { cursor: pointer; }

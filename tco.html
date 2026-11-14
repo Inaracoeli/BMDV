@@ -16,7 +16,8 @@
     type     B_  bouton   V_  voyant   C_  commutateur
   L'état visuel se pilote par l'attribut data-etat (blanc, jaune, rouge, bleu, vert).
   Commutateurs (TPL) : data-pos (ferme / ouvert, I / A) pour la manette,
-  data-etat="rouge" pour l'allumage du dôme.
+  data-etat="rouge" pour l'allumage du dôme. Manette en bas = actif (fermé / I), allumé rouge ;
+  manette en haut = inactif (ouvert / A), éteint.
   Les zones portent aussi data-zone : z1 et z2 ont chacune deux contrôles
   (T_V_Z1 + T_V_Z1B, T_V_Z2 + T_V_Z2B).
   Les composants répétés (c-btn, c-lamp, c-zone, c-tile, c-tpl...) sont définis
@@ -302,9 +303,9 @@
     <!-- Autorisation au point E -->
     <text class="lbl-md" x="1163" y="150">Au E</text>
     <g id="T_V_AUE" class="lamp"><title>T_V_AUE — Voyant Au E</title><use href="#c-lamp" x="1163" y="170"/></g>
-    <text class="lbl-md" x="1234" y="113">I</text>
-    <text class="lbl-md" x="1234" y="199">A</text>
-    <g id="T_C_AUE" class="commut interactif" data-pos="A" transform="translate(1234 150)"><title>T_C_AUE — Commutateur Au E (I / A)</title>
+    <text class="lbl-md" x="1234" y="113">A</text>
+    <text class="lbl-md" x="1234" y="199">I</text>
+    <g id="T_C_AUE" class="commut interactif" data-pos="A" transform="translate(1234 150)"><title>T_C_AUE — Commutateur Au E (A en haut / I en bas)</title>
       <use href="#c-tpl"/><g class="manette"><use href="#c-manette"/></g></g>
   </g>
 
@@ -312,21 +313,25 @@
   <!--  CONSOLE                                              -->
   <!-- ===================================================== -->
 
-  <!-- SAAT -->
+  <!-- SAAT (suivi des trains) : écran à part, numéros de train selon leur position -->
   <g id="saat">
-    <path d="M336 596 q-12 0 -12 12 v52 q0 8 -10 10 q10 2 10 10 v52 q0 12 12 12" fill="none" stroke="var(--saat)" stroke-width="2"/>
-    <path d="M808 596 q12 0 12 12 v52 q0 8 10 10 q-10 2 -10 10 v52 q0 12 -12 12" fill="none" stroke="var(--saat)" stroke-width="2"/>
-    <line x1="346" y1="628" x2="798" y2="628" stroke="var(--saat)" stroke-width="2"/>
-    <line x1="346" y1="704" x2="798" y2="704" stroke="var(--saat)" stroke-width="2"/>
-    <text class="lbl-saat" x="394" y="602">An</text>
-    <g id="SAAT_AN1" class="saat"><title>SAAT_AN1 — Annonce V1</title><rect x="392" y="608" width="100" height="40" rx="4"/><text class="lbl-saat-v" x="442" y="634"></text></g>
-    <text class="lbl-saat" x="660" y="602">C1</text>
-    <g id="SAAT_C1" class="saat"><title>SAAT_C1 — Carré C1</title><rect x="658" y="608" width="100" height="40" rx="4"/><text class="lbl-saat-v" x="708" y="634"></text></g>
-    <text class="lbl-saat" x="394" y="678">C2</text>
-    <g id="SAAT_C2" class="saat"><title>SAAT_C2 — Carré C2</title><rect x="392" y="684" width="100" height="40" rx="4"/><text class="lbl-saat-v" x="442" y="710"></text></g>
-    <text class="lbl-saat" x="660" y="678">An</text>
-    <g id="SAAT_AN2" class="saat"><title>SAAT_AN2 — Annonce V2</title><rect x="658" y="684" width="100" height="40" rx="4"/><text class="lbl-saat-v" x="708" y="710"></text></g>
-    <text class="lbl-md" x="872" y="676">SAAT</text>
+    <rect x="46" y="570" width="600" height="204" rx="12" fill="url(#g-metal-sombre)" stroke="#0e0f10" stroke-width="1.5" filter="url(#ombre-panneau)"/>
+    <rect x="58" y="582" width="576" height="180" rx="7" fill="#07090b" stroke="#000" stroke-width="2"/>
+    <text class="lbl-saat" x="72" y="601">SAAT · SUIVI DES TRAINS</text>
+    <g stroke="#e9eef4" stroke-width="2">
+      <line x1="76" y1="648" x2="616" y2="648"/><line x1="76" y1="722" x2="616" y2="722"/>
+    </g>
+    <g fill="#e9eef4">
+      <path d="M604 642 l12 6 l-12 6 Z"/><path d="M88 716 l-12 6 l12 6 Z"/>
+    </g>
+    <text class="lbl-saat" x="132" y="624">An</text>
+    <g id="SAAT_AN1" class="saat"><title>SAAT_AN1 — Annonce V1</title><rect x="130" y="631" width="110" height="34" rx="2"/><text class="lbl-saat-v" x="185" y="654"></text></g>
+    <text class="lbl-saat" x="432" y="624">C1</text>
+    <g id="SAAT_C1" class="saat"><title>SAAT_C1 — Carré C1</title><rect x="430" y="631" width="110" height="34" rx="2"/><text class="lbl-saat-v" x="485" y="654"></text></g>
+    <text class="lbl-saat" x="132" y="698">C2</text>
+    <g id="SAAT_C2" class="saat"><title>SAAT_C2 — Carré C2</title><rect x="130" y="705" width="110" height="34" rx="2"/><text class="lbl-saat-v" x="185" y="728"></text></g>
+    <text class="lbl-saat" x="432" y="698">An</text>
+    <g id="SAAT_AN2" class="saat"><title>SAAT_AN2 — Annonce V2</title><rect x="430" y="705" width="110" height="34" rx="2"/><text class="lbl-saat-v" x="485" y="728"></text></g>
   </g>
 
   <!-- Titre console + bulletins -->
@@ -341,7 +346,7 @@
     <path d="M1050 697 h26 l12 12 v36 h-38 Z M1076 697 v12 h12" filter="url(#ombre)"/><text class="lbl-md" x="1069" y="734" style="font-size:15px">MV</text></g>
 
   <!-- Point E -->
-  <g id="point-e">
+  <g id="point-e" transform="translate(196 0)">
     <text class="lbl-md" x="1100" y="676">Point E</text>
     <path d="M1172 572 q-12 0 -12 12 v76 q0 8 -10 10 q10 2 10 10 v64 q0 12 12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
     <path d="M1690 572 q12 0 12 12 v76 q0 8 10 10 q-10 2 -10 10 v64 q0 12 -12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
@@ -373,20 +378,30 @@
     <g id="E_B_CLE" class="interactif"><title>E_B_CLE — Clé E</title>
       <use href="#c-cle" x="1234" y="692"/><text class="lbl-sm" x="1234" y="696" style="font-size:12px">E</text></g>
 
-    <g id="E_B_VCM1" class="vcm interactif" data-pos="F"><title>E_B_VCM1 — Vcm 1 (F / O)</title>
+    <g id="E_B_VCM1" class="vcm interactif" data-pos="F"><title>E_B_VCM1 — Vcm 1 (levier vers F ou O)</title>
       <rect x="1294" y="670" width="50" height="72" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
       <rect x="1296" y="672" width="46" height="52" rx="2.5" fill="#5c8a4c"/><rect x="1296" y="672" width="46" height="52" rx="2.5" fill="url(#g-reflet)"/>
-      <circle class="pt" cx="1305" cy="687" r="4.5" fill="#111"/>
-      <text class="lbl-sm" x="1305" y="717" style="fill:#f2f2ee">F</text><text class="lbl-sm" x="1333" y="717" style="fill:#f2f2ee">O</text>
+      <text class="lbl-sm" x="1303" y="720" style="fill:#f2f2ee">F</text><text class="lbl-sm" x="1335" y="720" style="fill:#f2f2ee">O</text>
+      <path d="M1310 718 a9 9 0 0 1 18 0 Z" fill="#2b2f33"/>
+      <g transform="translate(1319 714)"><g class="levier">
+        <rect x="-3" y="-32" width="6" height="32" rx="2.5" fill="url(#g-manette)" stroke="#33373c" stroke-width="1"/>
+        <circle cy="-33" r="6" fill="url(#g-chrome)" stroke="#33373c" stroke-width="1"/>
+      </g></g>
+      <circle cx="1319" cy="714" r="4" fill="url(#g-chrome)" stroke="#33373c"/>
       <rect x="1296" y="724" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1319" y="736">Vcm 1</text></g>
 
     <g id="E_V_AUE" class="tile"><title>E_V_AUE — Au E</title><use href="#c-tile" x="1410" y="674"/><text class="lbl-tile" x="1433" y="736">Au E</text></g>
 
-    <g id="E_B_VCM2" class="vcm interactif" data-pos="F"><title>E_B_VCM2 — Vcm 2 (F / O)</title>
+    <g id="E_B_VCM2" class="vcm interactif" data-pos="F"><title>E_B_VCM2 — Vcm 2 (levier vers F ou O)</title>
       <rect x="1516" y="670" width="50" height="72" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
       <rect x="1518" y="672" width="46" height="52" rx="2.5" fill="#5c8a4c"/><rect x="1518" y="672" width="46" height="52" rx="2.5" fill="url(#g-reflet)"/>
-      <circle class="pt" cx="1527" cy="687" r="4.5" fill="#111"/>
-      <text class="lbl-sm" x="1527" y="717" style="fill:#f2f2ee">F</text><text class="lbl-sm" x="1555" y="717" style="fill:#f2f2ee">O</text>
+      <text class="lbl-sm" x="1525" y="720" style="fill:#f2f2ee">F</text><text class="lbl-sm" x="1557" y="720" style="fill:#f2f2ee">O</text>
+      <path d="M1532 718 a9 9 0 0 1 18 0 Z" fill="#2b2f33"/>
+      <g transform="translate(1541 714)"><g class="levier">
+        <rect x="-3" y="-32" width="6" height="32" rx="2.5" fill="url(#g-manette)" stroke="#33373c" stroke-width="1"/>
+        <circle cy="-33" r="6" fill="url(#g-chrome)" stroke="#33373c" stroke-width="1"/>
+      </g></g>
+      <circle cx="1541" cy="714" r="4" fill="url(#g-chrome)" stroke="#33373c"/>
       <rect x="1518" y="724" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1541" y="736">Vcm 2</text></g>
 
     <g id="E_B_CLF" class="interactif"><title>E_B_CLF — Clé F</title>
