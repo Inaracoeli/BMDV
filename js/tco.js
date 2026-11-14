@@ -49,13 +49,43 @@ const TCO = (function () {
     Sonnerie.regler({ annonce: sonneAnnonce, reddition: sonneReddition });
   }
 
+  // Durée pendant laquelle un bouton relâché reste considéré comme appuyé :
+  // permet l'action « simultanée » à la souris (Sonnerie puis Reddition).
+  const MAINTIEN_MS = 3000;
+
   function brancher(moteur) {
     const clic = (id, action) => el(id).addEventListener('click', () => moteur.agir(action));
+    const maintenu = {};
+    const estAppuye = (id) => (maintenu[id] || 0) > Date.now();
+
+    function appuyer(id, auContact) {
+      const e = el(id);
+      let minuterie;
+      e.addEventListener('pointerdown', () => {
+        clearTimeout(minuterie);
+        maintenu[id] = Infinity;
+        e.classList.add('appuye');
+        auContact();
+      });
+      const relacher = () => {
+        if (maintenu[id] !== Infinity) return;
+        maintenu[id] = Date.now() + MAINTIEN_MS;
+        minuterie = setTimeout(() => e.classList.remove('appuye'), MAINTIEN_MS);
+      };
+      e.addEventListener('pointerup', relacher);
+      e.addEventListener('pointerleave', relacher);
+      e.addEventListener('pointercancel', relacher);
+    }
 
     Object.entries(CABLAGE).forEach(([voie, c]) => {
-      clic(c.reddition, { type: 'B_REDDITION', voie });
+      // Voie libre : action simultanée sur Sonnerie et Reddition (même colonne)
+      const rendre = () => moteur.agir({ type: 'B_REDDITION', voie, sonnerieAppuyee: estAppuye(c.sonnerieAnnonce) });
+      appuyer(c.reddition, rendre);
+      appuyer(c.sonnerieAnnonce, () => {
+        moteur.agir({ type: 'B_ARRET_SONNERIE', voie, sonnerie: 'annonce' });
+        if (estAppuye(c.reddition)) rendre();
+      });
       clic(c.annonce, { type: 'B_ANNONCE', voie });
-      clic(c.sonnerieAnnonce, { type: 'B_ARRET_SONNERIE', voie, sonnerie: 'annonce' });
       clic(c.sonnerieReddition, { type: 'B_ARRET_SONNERIE', voie, sonnerie: 'reddition' });
       clic(c.commutateur, { type: 'B_SEMAPHORE', voie });
     });

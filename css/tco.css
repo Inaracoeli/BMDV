@@ -92,6 +92,44 @@ html, body {
 .interactif { cursor: pointer; }
 .interactif:hover { filter: brightness(1.12); }
 
+/* Bouton tenu appuyé (action simultanée Sonnerie + Reddition) */
+.btn.appuye { filter: brightness(1.5); }
+
+/* ---------- Mini guide ---------- */
+#guide {
+  width: min(980px, 94vw); max-height: 92vh; padding: 0 26px 18px; border: 2px solid #0f1012; border-radius: 10px;
+  background: #f7f4e4; color: #2b2f33; font: 15px/1.4 Arial, Helvetica, sans-serif;
+}
+#guide::backdrop { background: rgba(10, 12, 14, .7); }
+#guide header {
+  position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
+  margin: 0 -26px 12px; padding: 12px 26px; background: #1b1e21; color: #f2f2ee;
+}
+#guide h1 { font-size: 21px; margin: 0; letter-spacing: 1px; }
+#guide h1 small { font-size: 14px; font-weight: normal; color: #b9bcc0; margin-left: 10px; letter-spacing: 0; }
+#guide .fermer { font-size: 18px; color: #f2f2ee; background: none; border: 1px solid #6b6f74; border-radius: 4px; padding: 2px 10px; cursor: pointer; }
+#guide .principe { margin: 0 0 12px; }
+#guide ol { list-style: none; margin: 0; padding: 0; }
+#guide ol > li {
+  display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: center;
+  padding: 10px 14px; margin-bottom: 8px; background: #fffdf4; border: 1px solid #cfcab4; border-radius: 6px;
+}
+#guide h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+#guide .num { color: #8a8d92; font-weight: normal; }
+#guide .qui { background: #d9730d; color: #fff; border-radius: 4px; padding: 0 8px; }
+#guide ul { margin: 0; padding-left: 20px; }
+#guide .effets { margin: 5px 0 0; font-size: 13px; color: #55595e; }
+#guide .puce { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 1.5px solid #25282c; margin: 0 4px 0 8px; vertical-align: -1px; }
+#guide .puce.jaune { background: var(--jaune); } #guide .puce.rouge { background: var(--rouge); }
+#guide .puce.blanc { background: #fff; } #guide .puce.eteint { background: #2a2d31; }
+#guide .note { margin: 6px 0 0; font-size: 14px; }
+#guide .schema { width: 300px; }
+#guide .schema .poste { fill: #e6e2cf; stroke: #6b6f74; } #guide .schema .poste.actif { fill: #d9730d; stroke: #a85608; }
+#guide .schema .lettre { font: bold 15px Arial, sans-serif; text-anchor: middle; fill: #55595e; } #guide .schema .lettre.actif { fill: #fff; }
+#guide .schema .voie { fill: var(--voie); } #guide .schema .mat { stroke: #3a3e43; stroke-width: 2; }
+#guide .schema .feu { stroke: #25282c; stroke-width: 1.5; } #guide .schema .feu.ferme { fill: var(--rouge); } #guide .schema .feu.ouvert { fill: var(--vert); }
+#guide .schema .train { fill: #25282c; } #guide .schema .fleche { fill: none; stroke: #25282c; stroke-width: 2; }
+
 /* ---------- Panneau formateur provisoire (étape 2) ---------- */
 #panneau-provisoire {
   height: 128px; box-sizing: border-box; overflow: hidden;

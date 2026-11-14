@@ -43,6 +43,9 @@
       voies: { V1: voieInitiale(), V2: voieInitiale() },
       auE: 'A',
       vcm: { 1: 'F', 2: 'F' },
+      reglages: {
+        redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
+      },
       // Enclenchements du block ; le formateur peut les lever pour créer un dérangement
       enclenchements: {
         blocageSemaphore: true,             // sémaphore bloqué fermé derrière un train
@@ -89,14 +92,15 @@
         v.approche = false;
         v.sema.ouvert = false;
         v.sema.bloque = true;
+        v.sonnerieAnnonce = true; // la pédale fait retentir la sonnerie
         if (!v.annonceRecue) v.arriveeSansAnnonce = true;
-        return ok(`${a.voie} : le train franchit le sémaphore, fermeture automatique`);
+        return ok(`${a.voie} : le train franchit le sémaphore, fermeture automatique et sonnerie`);
       },
 
       // ---------- Poste B (l'élève) ----------
       B_ARRET_SONNERIE(v, a) {
         const cle = a.sonnerie === 'reddition' ? 'sonnerieReddition' : 'sonnerieAnnonce';
-        if (!v[cle]) return sansEffet(`Bravo : pas de sonnerie à arrêter (${a.voie})`);
+        if (!v[cle]) return ok(`Bravo appuie sur Sonnerie (${a.voie})`);
         v[cle] = false;
         return ok(`Bravo arrête la sonnerie ${a.sonnerie === 'reddition' ? 'de reddition' : "d'annonce"} (${a.voie})`);
       },
@@ -126,6 +130,9 @@
       B_REDDITION(v, a) {
         const p = POSTES[a.voie];
         const e = etat.enclenchements;
+        if (etat.reglages.redditionAvecSonnerie && !a.sonnerieAppuyee) {
+          return sansEffet(`Bravo : reddition sans effet, appuyer en même temps sur Sonnerie et Reddition (${a.voie})`);
+        }
         if (!v.annonceRecue) return sansEffet(`Bravo : reddition sans effet, aucune annonce reçue de ${p.amont}`);
         if (e.redditionSemaphoreBloque && !(v.sema.bloque && !v.sema.ouvert)) {
           return sansEffet(`Bravo : reddition sans effet, le sémaphore n'est pas bloqué (${a.voie})`);

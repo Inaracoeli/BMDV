@@ -27,12 +27,15 @@ function essai(nom, f) {
     // Fermeture automatique : signal fermé alors que la manette est restée sur ouvert
     assert.ok(!v().sema.ouvert && v().sema.manette === 'ouvert' && v().sema.bloque && !v().approche);
 
+    assert.ok(v().sonnerieAnnonce); // la pédale fait retentir la sonnerie
+    agir('B_ARRET_SONNERIE', { sonnerie: 'annonce' });
     assert.ok(agir('B_SEMAPHORE').ok); // confirmation de fermeture
     assert.strictEqual(v().sema.manette, 'ferme');
 
     assert.ok(agir('B_ANNONCE').ok);
     assert.ok(v().annonceEmise);
-    assert.ok(agir('B_REDDITION').ok);
+    assert.ok(!agir('B_REDDITION').ok); // sans la sonnerie : sans effet
+    assert.ok(agir('B_REDDITION', { sonnerieAppuyee: true }).ok);
     assert.ok(!v().annonceRecue);
 
     // Sémaphore bloqué tant que l'aval n'a pas rendu voie libre
@@ -56,15 +59,15 @@ essai('les deux voies sont indépendantes', () => {
 
 essai('reddition sans effet sans annonce reçue', () => {
   const m = Moteur.creer();
-  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1' }).ok);
+  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
 });
 
 essai('reddition sans effet si le sémaphore n\'est pas bloqué, sauf enclenchement levé', () => {
   const m = Moteur.creer();
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
-  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1' }).ok);
+  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
   m.agir({ type: 'ENCLENCHEMENT', nom: 'redditionSemaphoreBloque', actif: false });
-  assert.ok(m.agir({ type: 'B_REDDITION', voie: 'V1' }).ok);
+  assert.ok(m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
 });
 
 essai('reddition sans effet si le train est arrivé avant l\'annonce', () => {
@@ -72,9 +75,9 @@ essai('reddition sans effet si le train est arrivé avant l\'annonce', () => {
   m.agir({ type: 'TRAIN_PEDALE', voie: 'V1' });
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
   m.agir({ type: 'B_ANNONCE', voie: 'V1' });
-  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1' }).ok);
+  assert.ok(!m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
   m.agir({ type: 'ENCLENCHEMENT', nom: 'redditionAnnonceAvantArrivee', actif: false });
-  assert.ok(m.agir({ type: 'B_REDDITION', voie: 'V1' }).ok);
+  assert.ok(m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
 });
 
 essai('une seconde annonce est sans effet tant que voie libre n\'est pas rendue', () => {

@@ -16,6 +16,7 @@ la base de données, accessible uniquement après authentification.
 | `js/moteur.js` | Moteur du block : état et règles, sans dépendance au navigateur |
 | `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
 | `js/sonnerie.js` | Sonneries d'annonce et de reddition, synthétisées |
+| `js/guide.js` | Mini guide « Faire circuler un train », ouvert par le bouton GUIDE |
 | `js/panneau-provisoire.js` | Panneau formateur provisoire (joue Alfa, Charlie et le train) |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 
