@@ -13,7 +13,12 @@ la base de données, accessible uniquement après authentification.
 |---|---|
 | `tco.html` | TCO du poste B (écran élève) |
 | `css/tco.css` | Styles et états lumineux du TCO |
-| `js/tco-test.js` | Mode test de l'étape 1 (défilement manuel des états) |
+| `js/moteur.js` | Moteur du block : état et règles, sans dépendance au navigateur |
+| `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
+| `js/sonnerie.js` | Sonneries d'annonce et de reddition, synthétisées |
+| `js/guide.js` | Mini guide « Faire circuler un train », ouvert par le bouton GUIDE |
+| `js/panneau-provisoire.js` | Panneau formateur provisoire (joue Alfa, Charlie et le train) |
+| `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 
 ## Nomenclature des éléments
 
@@ -37,7 +42,7 @@ Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une s
 ## Avancement
 
 - [x] Étape 1 — TCO statique
-- [ ] Étape 2 — Moteur de block (sans réseau)
+- [x] Étape 2 — Moteur de block (sans réseau)
 - [ ] Étape 3 — Circulation des trains
 - [ ] Étape 4 — Écran formateur
 - [ ] Étape 5 — Synchronisation temps réel et authentification

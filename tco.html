@@ -14,7 +14,8 @@
     préfixe  A_  block côté Alfa      C_  block côté Charlie
              T_  TCC                  E_  Point E
     type     B_  bouton   V_  voyant   C_  commutateur
-  L'état visuel se pilote par l'attribut data-etat (blanc, jaune, rouge, bleu, vert).
+  L'affichage est piloté par js/tco.js à partir de l'état du moteur (js/moteur.js),
+  par l'attribut data-etat (blanc, jaune, rouge, bleu, vert).
   Commutateurs (TPL) : data-pos (ferme / ouvert, I / A) pour la manette,
   data-etat="rouge" pour l'allumage du dôme. Manette en bas = actif (fermé / I), allumé rouge ;
   manette en haut = inactif (ouvert / A), éteint.
@@ -160,6 +161,8 @@
       <line x1="156" y1="195" x2="156" y2="483"/><line x1="60" y1="290" x2="252" y2="290"/><line x1="60" y1="386" x2="252" y2="386"/>
     </g>
 
+    <!-- Repère : Reddition et Sonnerie s'actionnent ensemble pour rendre voie libre -->
+    <path class="liaison" d="M77 240 h-8 V338 h8"/>
     <text class="lbl-sm" x="108" y="208">REDDITION</text>
     <g id="A_B_RED" class="btn interactif"><title>A_B_RED — Reddition (côté Alfa)</title><use href="#c-btn" x="108" y="240"/></g>
 
@@ -201,6 +204,7 @@
       <line x1="1844" y1="195" x2="1844" y2="483"/><line x1="1748" y1="290" x2="1940" y2="290"/><line x1="1748" y1="386" x2="1940" y2="386"/>
     </g>
 
+    <path class="liaison" d="M1765 240 h-8 V338 h8"/>
     <text class="lbl-sm" x="1796" y="208">REDDITION</text>
     <g id="C_B_RED" class="btn interactif"><title>C_B_RED — Reddition (côté Charlie)</title><use href="#c-btn" x="1796" y="240"/></g>
 
@@ -338,6 +342,12 @@
   <rect x="903" y="580" width="226" height="54" rx="5" fill="var(--plaque)" stroke="#b9bcc0" stroke-width="2.5" filter="url(#ombre)"/>
   <text class="lbl-titre" x="1018" y="618" style="font-size:28px;letter-spacing:4px">CONSOLE</text>
 
+  <!-- Bouton d'ouverture du mini guide -->
+  <g id="BTN_GUIDE" class="interactif"><title>Guide : faire circuler un train</title>
+    <rect x="956" y="648" width="132" height="32" rx="5" fill="#fdfcf5" stroke="#3a3e43" stroke-width="1.5" filter="url(#ombre)"/>
+    <circle cx="976" cy="664" r="9" fill="var(--plaque)"/><text class="lbl-sm" x="976" y="668.5" style="fill:#f2f2ee;font-size:13px">?</text>
+    <text class="lbl" x="1034" y="669" style="letter-spacing:2px">GUIDE</text></g>
+
   <g id="BUL_C" class="bulletin interactif"><title>BUL_C — Bulletin C</title>
     <path d="M956 697 h26 l12 12 v36 h-38 Z M982 697 v12 h12" filter="url(#ombre)"/><text class="lbl-md" x="975" y="734">C</text></g>
   <g id="BUL_S" class="bulletin interactif"><title>BUL_S — Bulletin S</title>
@@ -409,11 +419,17 @@
   </g>
 </svg>
 
-<div id="bandeau-test">
-  <label><input type="checkbox" id="mode-test"> Mode test</label>
-  — clic sur un élément pour faire défiler ses états · élément : <code id="info-element">—</code>
+<!-- Panneau formateur provisoire (étape 2) : joue Alfa, Charlie et le train -->
+<div id="panneau-provisoire">
+  <div class="voies"></div>
+  <div class="enclenchements"><strong>Enclenchements</strong></div>
+  <div id="journal">Prêt.</div>
 </div>
 
-<script src="js/tco-test.js"></script>
+<script src="js/moteur.js"></script>
+<script src="js/sonnerie.js"></script>
+<script src="js/tco.js"></script>
+<script src="js/panneau-provisoire.js"></script>
+<script src="js/guide.js"></script>
 </body>
 </html>
