@@ -77,9 +77,9 @@ html, body {
 .commut[data-pos="I"] .manette { transform: rotate(180deg); }
 
 /* ---------- Vcm (point E) ---------- */
-/* Levier incliné vers F (à gauche) ou vers O (à droite) */
-.vcm .levier { transition: transform .2s; transform: rotate(-30deg); }
-.vcm[data-pos="O"] .levier { transform: rotate(30deg); }
+/* Levier articulé en haut, pointant en bas à gauche (F) ou en bas à droite (O) */
+.vcm .levier { transition: transform .2s; transform: rotate(30deg); }
+.vcm[data-pos="O"] .levier { transform: rotate(-30deg); }
 
 /* ---------- Bulletins (C / S / MV) ---------- */
 .bulletin path { fill: #fff; stroke: #3a3e43; stroke-width: 1.5; stroke-linejoin: round; }
