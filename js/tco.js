@@ -11,7 +11,8 @@ const TCO = (function () {
       annonce: 'C_B_ANN', voieLibre: 'C_V_VL', sonnerieReddition: 'C_B_SN1',
       commutateur: 'A_C_S1', voyantSemaphore: 'A_V_S1', voyantAnnonce: 'T_V_AN1',
       zoneA: ['T_V_Z1', 'T_V_Z1B'], zoneB: ['T_V_Z3'],
-      voletApproche: 'E_V_ZAP1', voletZone: 'E_V_Z1',
+      voletApproche: 'E_V_ZAP1', voletEap: 'E_V_EAP1', voletZone: 'E_V_Z1',
+      voletCarre: 'E_V_C1', voyantCarre: 'T_V_C1',
       saatAnnonce: 'SAAT_AN1', saatCarre: 'SAAT_C1',
     },
     V2: {
@@ -19,7 +20,8 @@ const TCO = (function () {
       annonce: 'A_B_ANN', voieLibre: 'A_V_VL', sonnerieReddition: 'A_B_SN2',
       commutateur: 'C_C_S2', voyantSemaphore: 'C_V_S2', voyantAnnonce: 'T_V_AN2',
       zoneA: ['T_V_Z2', 'T_V_Z2B'], zoneB: ['T_V_Z4'],
-      voletApproche: 'E_V_ZAP2', voletZone: 'E_V_Z2',
+      voletApproche: 'E_V_ZAP2', voletEap: 'E_V_EAP2', voletZone: 'E_V_Z2',
+      voletCarre: 'E_V_C2', voyantCarre: 'T_V_C2',
       saatAnnonce: 'SAAT_AN2', saatCarre: 'SAAT_C2',
     },
   };
@@ -53,8 +55,13 @@ const TCO = (function () {
       allumer(c.sonnerieReddition, v.sonnerieReddition && 'blanc');
       // Occupation par les trains : annonce, zone d'approche, zones, SAAT
       const o = Moteur.occupation(etat, voie);
+      // Un gong appuie l'allumage du voyant d'annonce
+      if (o.annonce && !el(c.voyantAnnonce).dataset.etat && !premierAffichage) Sonnerie.gong();
       allumer(c.voyantAnnonce, o.annonce && 'jaune');
       basculer(c.voletApproche, o.approche);
+      basculer(c.voletEap, o.eap);
+      basculer(c.voletCarre, v.carre.ferme);
+      allumer(c.voyantCarre, v.carre.ferme && 'rouge');
       basculer(c.voletZone, o.zoneA);
       c.zoneA.forEach((id) => allumer(id, o.zoneA && 'rouge'));
       c.zoneB.forEach((id) => allumer(id, o.zoneB && 'rouge'));

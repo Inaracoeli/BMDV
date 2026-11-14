@@ -19,6 +19,7 @@
     blocageSemaphore: 'Blocage du sémaphore',
     redditionSemaphoreBloque: 'Reddition : sémaphore bloqué exigé',
     redditionAnnonceAvantArrivee: 'Reddition : annonce avant arrivée exigée',
+    approche: 'EAP : carré non refermable si ZAP occupée',
   };
   const POSITIONS = {
     'canton-amont': (p) => `en ligne, de ${p.amont} vers Bravo`,
@@ -94,8 +95,8 @@
 
   // ---------- Durées de parcours (secondes, à vitesse normale) ----------
   const LIBELLES_DUREES = {
-    'canton-amont': 'ligne', annonce: 'annonce', approche: 'ZAP',
-    'zone-a': 'zone 1', 'zone-b': 'zone 2', 'canton-aval': 'ligne après Bravo',
+    'canton-amont': 'ligne avant', annonce: 'annonce', approche: 'ZAP',
+    'zone-a': 'z1/z2', 'zone-b': 'z3/z4', 'canton-aval': 'ligne après', redemarrage: 'redémarrage',
   };
   const champsDurees = {};
   const titreDurees = document.createElement('strong');
@@ -124,7 +125,7 @@
   // ---------- Liste des trains (reconstruite seulement quand elle change) ----------
   let signature = null;
   function afficherTrains(etat) {
-    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse, t.terminus]));
+    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse, t.terminus, t.demarrage != null]));
     if (s === signature) return;
     signature = s;
     zoneTrains.replaceChildren();
@@ -138,7 +139,7 @@
       nom.textContent = `Train ${t.numero} · ${t.origine} → ${t.destination}`;
       ou.textContent = `${t.voie}, ` + POSITIONS[Moteur.PARCOURS[t.etape].nom](p, t.voie)
         + (t.terminus ? ' — terminus, à quai' : '')
-        + (t.attente ? ' — arrêté devant le signal fermé' : '')
+        + (t.attente ? (t.demarrage != null ? ' — se remet en marche' : ' — arrêté devant le signal fermé') : '')
         + (t.arrete ? (t.origine === 'Bravo' && t.etape === 4 ? ' — à quai, attend le départ' : ' — arrêté par le formateur') : '');
       ligne.append(nom);
       if (!t.terminus) {

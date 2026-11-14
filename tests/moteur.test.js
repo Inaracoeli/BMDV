@@ -97,7 +97,7 @@ essai('sémaphore bloqué : ouverture possible si l\'enclenchement est levé', (
 
 const temps = (m, ms) => { for (let i = 0; i < ms / 100; i++) m.agir({ type: 'TEMPS', dt: 100 }); };
 // Durées courtes et fixes pour les essais, indépendantes des réglages par défaut
-const DUREES_ESSAI = { 'canton-amont': 5, annonce: 5, approche: 3, pedale: 1, 'zone-a': 5, 'zone-b': 5, 'canton-aval': 10 };
+const DUREES_ESSAI = { 'canton-amont': 5, annonce: 5, approche: 3, pedale: 1, 'zone-a': 5, 'zone-b': 5, 'canton-aval': 10, redemarrage: 0 };
 const moteurEssai = () => {
   const m = Moteur.creer();
   Object.entries(DUREES_ESSAI).forEach(([nom, secondes]) => m.agir({ type: 'DUREE', nom, secondes }));
@@ -185,9 +185,61 @@ essai('départ de Bravo : à quai jusqu\'à l\'ordre de départ, sans actionner 
 essai('parcours impossibles refusés, durées par défaut', () => {
   const m = Moteur.creer();
   assert.ok(!m.agir({ type: 'TRAIN_CREER', origine: 'Bravo', destination: 'Bravo' }).ok);
-  assert.strictEqual(m.lire().durees['canton-aval'], 30000);
   const d = m.lire().durees;
-  assert.strictEqual(d['canton-amont'] + d.annonce + d.approche, 30000);
+  assert.ok(d['canton-amont'] === 30000 && d['canton-aval'] === 30000);
+  assert.ok(d.annonce === 10000 && d.approche === 10000 && d['zone-a'] === 10000 && d['zone-b'] === 10000);
+});
+
+essai('inertie : le train met quelques secondes à repartir après l\'ouverture du signal', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'DUREE', nom: 'redemarrage', secondes: 4 });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  temps(m, 20000);
+  const t = () => m.lire().trains[0];
+  assert.ok(t().attente);
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  temps(m, 3000);
+  assert.ok(t().attente && t().etape === 2); // pas encore reparti
+  temps(m, 1500);
+  assert.ok(!t().attente && t().etape === 3);
+});
+
+essai('inertie : si le signal se referme pendant le redémarrage, le train reste arrêté', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'DUREE', nom: 'redemarrage', secondes: 4 });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  temps(m, 20000);
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  temps(m, 2000);
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ferme' });
+  temps(m, 10000);
+  assert.ok(m.lire().trains[0].attente && m.lire().trains[0].etape === 2);
+});
+
+essai('EAP : enclenchée si ZAP occupée et carré ouvert, s\'oppose à la fermeture du carré', () => {
+  const m = moteurEssai();
+  const occ = () => Moteur.occupation(m.lire(), 'V1');
+  assert.ok(!occ().eap);
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  temps(m, 11000); // en ZAP
+  assert.ok(occ().approche && occ().eap);
+  assert.ok(!m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true }).ok);
+  assert.ok(!m.lire().voies.V1.carre.ferme);
+  m.agir({ type: 'TRAIN_SUPPRIMER', id: m.lire().trains[0].id });
+  assert.ok(!occ().eap); // ZAP libérée
+  assert.ok(m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true }).ok);
+});
+
+essai('carré fermé avant l\'arrivée du train : pas d\'EAP, le train s\'arrête même sémaphore ouvert', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  temps(m, 20000);
+  assert.ok(m.lire().trains[0].attente && !Moteur.occupation(m.lire(), 'V1').eap);
+  m.agir({ type: 'B_CARRE', voie: 'V1', ferme: false });
+  temps(m, 500);
+  assert.ok(!m.lire().trains[0].attente);
 });
 
 essai('réinitialisation', () => {

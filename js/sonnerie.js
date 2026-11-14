@@ -107,8 +107,36 @@ const Sonnerie = (function () {
     } catch (e) { /* pas de son disponible */ }
   }
 
+  // Gong d'annonce : aigu et bref, à l'entrée d'un train en zone d'annonce
+  let tamponGong = null;
+  function gong() {
+    try {
+      contexte();
+      if (!tamponGong) {
+        const sr = ctx.sampleRate;
+        const n = Math.round(0.9 * sr);
+        tamponGong = ctx.createBuffer(1, n, sr);
+        const d = tamponGong.getChannelData(0);
+        const partiels = [[1320, 1, 6], [2640, 0.35, 9], [3565, 0.3, 11], [5410, 0.15, 16]];
+        for (let i = 0; i < n; i++) {
+          const t = i / sr;
+          let s = 0;
+          for (const [f, niveau, amorti] of partiels) s += niveau * Math.sin(2 * Math.PI * f * t) * Math.exp(-t * amorti);
+          d[i] = 0.5 * s * Math.min(1, t / 0.002);
+        }
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = tamponGong;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.45;
+      source.connect(gain).connect(ctx.destination);
+      source.start();
+    } catch (e) { /* pas de son disponible */ }
+  }
+
   return {
     clic,
+    gong,
     // regler({ annonce: true|false, reddition: true|false })
     regler(voulu) {
       Object.keys(TIMBRES).forEach((nom) => (voulu[nom] ? demarrer(nom) : arreter(nom)));

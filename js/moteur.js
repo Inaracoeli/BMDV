@@ -33,10 +33,11 @@
   ];
   const ETAPE = Object.fromEntries(PARCOURS.map((e, i) => [e.nom, i]));
   // Durées par défaut en millisecondes, à vitesse normale (réglables par le formateur).
-  // 30 s d'un poste au signal de Bravo, 5 s par zone, 30 s de Bravo au poste suivant.
+  // 30 s en ligne entre les gares, 10 s par zone en gare. « redemarrage » : inertie
+  // d'un train arrêté devant un signal, entre l'ouverture et sa remise en marche.
   const DUREES = {
-    'canton-amont': 15000, annonce: 10000, approche: 5000, pedale: 1000,
-    'zone-a': 5000, 'zone-b': 5000, 'canton-aval': 30000,
+    'canton-amont': 30000, annonce: 10000, approche: 10000, pedale: 1000,
+    'zone-a': 10000, 'zone-b': 10000, 'canton-aval': 30000, redemarrage: 4000,
   };
   // Voie empruntée selon l'origine et la destination
   function voieDe(origine, destination) {
@@ -63,6 +64,8 @@
         ouvert: false,            // état réel du signal
         bloque: false,            // bloqué fermé jusqu'à réception de voie libre
       },
+      // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert
+      carre: { ferme: false },
     };
   }
 
@@ -84,6 +87,7 @@
         blocageSemaphore: true,             // sémaphore bloqué fermé derrière un train
         redditionSemaphoreBloque: true,     // reddition sans effet si le sémaphore n'est pas bloqué
         redditionAnnonceAvantArrivee: true, // reddition sans effet si le train est arrivé sans annonce
+        approche: true,                     // EAP : carré impossible à refermer tant que la ZAP est occupée
       },
     };
   }
@@ -143,6 +147,16 @@
         return ok(`Bravo ouvre le sémaphore (${a.voie})`);
       },
 
+      // Fermeture / ouverture du carré (sera commandée par les Vcm du point E)
+      B_CARRE(v, a) {
+        const fermer = a.ferme !== undefined ? !!a.ferme : !v.carre.ferme;
+        if (fermer && !v.carre.ferme && etat.enclenchements.approche && occupation(etat, a.voie).eap) {
+          return sansEffet(`Carré ${a.voie} : fermeture impossible, enclenchement d'approche (ZAP occupée)`);
+        }
+        v.carre.ferme = fermer;
+        return ok(`Carré ${a.voie} ${fermer ? 'fermé' : 'ouvert'}`);
+      },
+
       B_ANNONCE(v, a) {
         const p = POSTES[a.voie];
         if (v.annonceEmise) return sansEffet(`Bravo : annonce sans effet, voie libre non reçue de ${p.aval}`);
@@ -183,17 +197,33 @@
     // Fait avancer un train de dt millisecondes ; renvoie les événements survenus
     function avancer(t, dt, evenements) {
       const v = etat.voies[t.voie];
-      dt *= VITESSES[t.vitesse] || 1;
+      const facteur = VITESSES[t.vitesse] || 1;
+      // Le signal est franchissable si le sémaphore et le carré sont ouverts, ou sur autorisation
+      const franchissable = () => t.franchir || (v.sema.ouvert && !v.carre.ferme);
+      dt *= facteur;
       while (dt > 0 && !t.terminus) {
+        if (t.attente) {
+          if (!franchissable()) { t.demarrage = null; return; }
+          // Inertie : le train met quelques secondes à se remettre en marche
+          if (t.demarrage == null) {
+            t.demarrage = etat.durees.redemarrage;
+            evenements.push(`Train ${t.numero} se remet en marche (${t.voie})`);
+          }
+          const reel = dt / facteur;
+          if (t.demarrage > reel) { t.demarrage -= reel; return; }
+          dt -= t.demarrage * facteur;
+          t.demarrage = null;
+          t.attente = false;
+        }
         if (t.reste > dt) { t.reste -= dt; return; }
         dt -= t.reste;
         t.reste = 0;
-        if (PARCOURS[t.etape].signal && !v.sema.ouvert && !t.franchir) {
-          if (!t.attente) evenements.push(`Train ${t.numero} arrêté devant le signal fermé (${t.voie})`);
+        if (PARCOURS[t.etape].signal && !franchissable()) {
+          evenements.push(`Train ${t.numero} arrêté devant le signal fermé (${t.voie})`);
           t.attente = true;
+          t.demarrage = null;
           return;
         }
-        t.attente = false;
         t.etape += 1;
         if (t.etape >= PARCOURS.length) {
           etat.trains.splice(etat.trains.indexOf(t), 1);
@@ -229,7 +259,7 @@
           id: etat.prochainTrain++, numero, origine, destination, voie,
           vitesse: VITESSES[a.vitesse] ? a.vitesse : 'normale',
           etape, reste: etat.durees[PARCOURS[etape].nom],
-          arrete: departBravo, attente: false, franchir: false, terminus: false,
+          arrete: departBravo, attente: false, demarrage: null, franchir: false, terminus: false,
         });
         return ok(departBravo
           ? `Train ${numero} à quai à Bravo, prêt au départ vers ${destination} (${voie})`
@@ -326,7 +356,7 @@
 
   // Ce que les trains occupent sur une voie, pour l'affichage
   function occupation(etat, voie) {
-    const o = { annonce: false, approche: false, zoneA: false, zoneB: false, saatAnnonce: '', saatCarre: '' };
+    const o = { annonce: false, approche: false, eap: false, zoneA: false, zoneB: false, saatAnnonce: '', saatCarre: '' };
     etat.trains.filter((t) => t.voie === voie).forEach((t) => {
       const nom = PARCOURS[t.etape].nom;
       if (nom === 'annonce') { o.annonce = true; o.saatAnnonce = t.numero; }
@@ -336,6 +366,8 @@
       // Le numéro reste sur la case du carré de l'entrée en ZAP jusqu'à la libération de la dernière zone
       if (['approche', 'pedale', 'zone-a', 'zone-b'].includes(nom)) o.saatCarre = t.numero;
     });
+    // Enclenchement d'approche : ZAP occupée et carré ouvert
+    o.eap = o.approche && !etat.voies[voie].carre.ferme;
     return o;
   }
 
