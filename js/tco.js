@@ -10,11 +10,15 @@ const TCO = (function () {
       reddition: 'A_B_RED', sonnerieAnnonce: 'A_B_SN1',
       annonce: 'C_B_ANN', voieLibre: 'C_V_VL', sonnerieReddition: 'C_B_SN1',
       commutateur: 'A_C_S1', voyantSemaphore: 'A_V_S1', voyantAnnonce: 'T_V_AN1',
+      approche: ['E_V_ZAP1'], zoneA: ['T_V_Z1', 'T_V_Z1B', 'E_V_Z1'], zoneB: ['T_V_Z3'],
+      saatAnnonce: 'SAAT_AN1', saatCarre: 'SAAT_C1',
     },
     V2: {
       reddition: 'C_B_RED', sonnerieAnnonce: 'C_B_SN2',
       annonce: 'A_B_ANN', voieLibre: 'A_V_VL', sonnerieReddition: 'A_B_SN2',
       commutateur: 'C_C_S2', voyantSemaphore: 'C_V_S2', voyantAnnonce: 'T_V_AN2',
+      approche: ['E_V_ZAP2'], zoneA: ['T_V_Z2', 'T_V_Z2B', 'E_V_Z2'], zoneB: ['T_V_Z4'],
+      saatAnnonce: 'SAAT_AN2', saatCarre: 'SAAT_C2',
     },
   };
 
@@ -32,7 +36,14 @@ const TCO = (function () {
       allumer(c.annonce, v.annonceEmise && 'rouge');
       allumer(c.voieLibre, !v.annonceEmise && 'blanc');
       allumer(c.sonnerieReddition, v.sonnerieReddition && 'blanc');
-      allumer(c.voyantAnnonce, v.approche && 'jaune');
+      // Occupation par les trains : annonce, zone d'approche, zones, SAAT
+      const o = Moteur.occupation(etat, voie);
+      allumer(c.voyantAnnonce, o.annonce && 'jaune');
+      c.approche.forEach((id) => allumer(id, o.approche && 'rouge'));
+      c.zoneA.forEach((id) => allumer(id, o.zoneA && 'rouge'));
+      c.zoneB.forEach((id) => allumer(id, o.zoneB && 'rouge'));
+      el(c.saatAnnonce).querySelector('text').textContent = o.saatAnnonce;
+      el(c.saatCarre).querySelector('text').textContent = o.saatCarre;
       // Le voyant contrôle l'état réel du sémaphore ; le TPL ne suit que sa manette
       allumer(c.voyantSemaphore, !v.sema.ouvert && 'rouge');
       el(c.commutateur).dataset.pos = v.sema.manette;

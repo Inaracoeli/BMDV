@@ -19,6 +19,20 @@
     V2: { amont: 'Charlie', aval: 'Alfa' },
   };
 
+  // Parcours d'un train, identique pour les deux voies (durées en millisecondes
+  // à vitesse normale). « signal » : le train s'arrête en fin d'étape si le
+  // sémaphore est fermé. zone-a / zone-b = z1 / z3 en voie 1, z2 / z4 en voie 2.
+  const PARCOURS = [
+    { nom: 'canton-amont', duree: 5000 },
+    { nom: 'annonce', duree: 5000 },                // zone d'annonce
+    { nom: 'approche', duree: 3000, signal: true }, // ZAP, jusqu'au signal
+    { nom: 'pedale', duree: 1000 },                 // franchissement du signal
+    { nom: 'zone-a', duree: 5000 },
+    { nom: 'zone-b', duree: 5000 },
+    { nom: 'canton-aval', duree: 10000 },
+  ];
+  const VITESSES = { lente: 0.5, normale: 1, rapide: 2 };
+
   function voieInitiale() {
     return {
       // Canton amont -> B
@@ -34,13 +48,14 @@
         ouvert: false,            // état réel du signal
         bloque: false,            // bloqué fermé jusqu'à réception de voie libre
       },
-      approche: false,            // train sur la zone d'annonce
     };
   }
 
   function etatInitial() {
     return {
       voies: { V1: voieInitiale(), V2: voieInitiale() },
+      trains: [],          // { id, numero, voie, vitesse, etape, reste, arrete, attente, franchir }
+      prochainTrain: 1,
       auE: 'A',
       vcm: { 1: 'F', 2: 'F' },
       reglages: {
@@ -83,19 +98,10 @@
         return ok(`${p.aval} rend voie libre à Bravo (${a.voie})`);
       },
 
-      // ---------- Train ----------
-      TRAIN_APPROCHE(v, a) {
-        v.approche = a.present !== false;
-        return ok(`${a.voie} : train ${v.approche ? 'sur' : 'hors de'} la zone d'annonce`);
-      },
-      // Franchissement du sémaphore : fermeture automatique (aubinage) et blocage
+      // ---------- Pédale (actionnée par un train, ou seule pour un dérangement) ----------
       TRAIN_PEDALE(v, a) {
-        v.approche = false;
-        v.sema.ouvert = false;
-        v.sema.bloque = true;
-        v.sonnerieAnnonce = true; // la pédale fait retentir la sonnerie
-        if (!v.annonceRecue) v.arriveeSansAnnonce = true;
-        return ok(`${a.voie} : le train franchit le sémaphore, fermeture automatique et sonnerie`);
+        pedale(v);
+        return ok(`${a.voie} : pédale actionnée, fermeture automatique du sémaphore et sonnerie`);
       },
 
       // ---------- Poste B (l'élève) ----------
@@ -147,7 +153,96 @@
       },
     };
 
+    // Franchissement du sémaphore : fermeture automatique (aubinage), blocage, sonnerie
+    function pedale(v) {
+      v.sema.ouvert = false;
+      v.sema.bloque = true;
+      v.sonnerieAnnonce = true;
+      if (!v.annonceRecue) v.arriveeSansAnnonce = true;
+    }
+
+    const trouver = (id) => etat.trains.find((t) => t.id === id);
+
+    // Fait avancer un train de dt millisecondes ; renvoie les événements survenus
+    function avancer(t, dt, evenements) {
+      const v = etat.voies[t.voie];
+      const p = POSTES[t.voie];
+      dt *= VITESSES[t.vitesse] || 1;
+      while (dt > 0) {
+        if (t.reste > dt) { t.reste -= dt; return; }
+        dt -= t.reste;
+        t.reste = 0;
+        if (PARCOURS[t.etape].signal && !v.sema.ouvert && !t.franchir) {
+          if (!t.attente) evenements.push(`Train ${t.numero} arrêté devant le signal fermé (${t.voie})`);
+          t.attente = true;
+          return;
+        }
+        t.attente = false;
+        t.etape += 1;
+        if (t.etape >= PARCOURS.length) {
+          etat.trains.splice(etat.trains.indexOf(t), 1);
+          evenements.push(`Train ${t.numero} arrivé à ${p.aval} (${t.voie})`);
+          return;
+        }
+        t.reste = PARCOURS[t.etape].duree;
+        if (PARCOURS[t.etape].nom === 'pedale') {
+          t.franchir = false;
+          pedale(v);
+          evenements.push(`Train ${t.numero} franchit le signal (${t.voie})`);
+        }
+      }
+    }
+
     const actionsGenerales = {
+      // ---------- Trains (pilotés par le formateur) ----------
+      TRAIN_CREER(a) {
+        if (!etat.voies[a.voie]) return sansEffet(`Voie inconnue : ${a.voie}`);
+        const numero = String(a.numero || '').trim() || String(etat.prochainTrain);
+        etat.trains.push({
+          id: etat.prochainTrain++, numero, voie: a.voie,
+          vitesse: VITESSES[a.vitesse] ? a.vitesse : 'normale',
+          etape: 0, reste: PARCOURS[0].duree, arrete: false, attente: false, franchir: false,
+        });
+        return ok(`Train ${numero} parti de ${POSTES[a.voie].amont} (${a.voie})`);
+      },
+      TRAIN_ARRETER(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        t.arrete = true;
+        return ok(`Train ${t.numero} arrêté par le formateur`);
+      },
+      TRAIN_REPARTIR(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        t.arrete = false;
+        return ok(`Train ${t.numero} remis en marche`);
+      },
+      // Autorise le train à franchir le signal fermé (tient lieu de bulletin pour l'instant)
+      TRAIN_FRANCHIR(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        t.franchir = true;
+        return ok(`Train ${t.numero} autorisé à franchir le signal fermé`);
+      },
+      TRAIN_VITESSE(a) {
+        const t = trouver(a.id);
+        if (!t || !VITESSES[a.vitesse]) return sansEffet('Train ou vitesse inconnus');
+        t.vitesse = a.vitesse;
+        return ok(`Train ${t.numero} : vitesse ${a.vitesse}`);
+      },
+      TRAIN_SUPPRIMER(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        etat.trains.splice(etat.trains.indexOf(t), 1);
+        return ok(`Train ${t.numero} supprimé`);
+      },
+      // Écoulement du temps : appelé régulièrement par la page
+      TEMPS(a) {
+        const evenements = [];
+        etat.trains.slice().forEach((t) => { if (!t.arrete) avancer(t, a.dt, evenements); });
+        return { ok: true, message: evenements.join(' · ') || null };
+      },
+
       B_AU_E(a) {
         etat.auE = a.position || (etat.auE === 'A' ? 'I' : 'A');
         return ok(`Bravo met le commutateur Au E sur ${etat.auE}`);
@@ -193,5 +288,20 @@
     };
   }
 
-  return { creer, etatInitial, POSTES };
+  // Ce que les trains occupent sur une voie, pour l'affichage
+  function occupation(etat, voie) {
+    const o = { annonce: false, approche: false, zoneA: false, zoneB: false, saatAnnonce: '', saatCarre: '' };
+    etat.trains.filter((t) => t.voie === voie).forEach((t) => {
+      const nom = PARCOURS[t.etape].nom;
+      if (nom === 'annonce') { o.annonce = true; o.saatAnnonce = t.numero; }
+      if (nom === 'approche') o.approche = true;
+      if (nom === 'zone-a') o.zoneA = true;
+      if (nom === 'zone-b') o.zoneB = true;
+      // Le numéro reste sur la case du carré de l'entrée en ZAP jusqu'à la libération de la dernière zone
+      if (['approche', 'pedale', 'zone-a', 'zone-b'].includes(nom)) o.saatCarre = t.numero;
+    });
+    return o;
+  }
+
+  return { creer, etatInitial, occupation, POSTES, PARCOURS, VITESSES };
 });
