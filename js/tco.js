@@ -45,6 +45,9 @@ const TCO = (function () {
       const v = etat.voies[voie];
       allumer(c.reddition, v.annonceRecue && 'jaune');
       allumer(c.sonnerieAnnonce, v.sonnerieAnnonce && 'blanc');
+      // L'anneau de l'action simultanée n'apparaît que si une reddition est possible :
+      // train annoncé et passé chez nous. Sinon un simple appui arrête la sonnerie.
+      el(c.sonnerieAnnonce).classList.toggle('reddition-possible', v.annonceRecue && v.sema.bloque);
       allumer(c.annonce, v.annonceEmise && 'rouge');
       allumer(c.voieLibre, !v.annonceEmise && 'blanc');
       allumer(c.sonnerieReddition, v.sonnerieReddition && 'blanc');
