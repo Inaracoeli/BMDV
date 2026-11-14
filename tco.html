@@ -14,7 +14,8 @@
     préfixe  A_  block côté Alfa      C_  block côté Charlie
              T_  TCC                  E_  Point E
     type     B_  bouton   V_  voyant   C_  commutateur
-  L'état visuel se pilote par l'attribut data-etat (blanc, jaune, rouge, bleu, vert).
+  L'affichage est piloté par js/tco.js à partir de l'état du moteur (js/moteur.js),
+  par l'attribut data-etat (blanc, jaune, rouge, bleu, vert).
   Commutateurs (TPL) : data-pos (ferme / ouvert, I / A) pour la manette,
   data-etat="rouge" pour l'allumage du dôme. Manette en bas = actif (fermé / I), allumé rouge ;
   manette en haut = inactif (ouvert / A), éteint.
@@ -409,11 +410,16 @@
   </g>
 </svg>
 
-<div id="bandeau-test">
-  <label><input type="checkbox" id="mode-test"> Mode test</label>
-  — clic sur un élément pour faire défiler ses états · élément : <code id="info-element">—</code>
+<!-- Panneau formateur provisoire (étape 2) : joue Alfa, Charlie et le train -->
+<div id="panneau-provisoire">
+  <div class="voies"></div>
+  <div class="enclenchements"><strong>Enclenchements</strong></div>
+  <div id="journal">Prêt.</div>
 </div>
 
-<script src="js/tco-test.js"></script>
+<script src="js/moteur.js"></script>
+<script src="js/sonnerie.js"></script>
+<script src="js/tco.js"></script>
+<script src="js/panneau-provisoire.js"></script>
 </body>
 </html>

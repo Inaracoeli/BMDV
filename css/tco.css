@@ -31,7 +31,7 @@ html, body {
 .tco {
   display: block;
   width: 100vw;
-  height: calc(100vh - 34px);
+  height: calc(100vh - 128px);
 }
 
 /* ---------- Textes ---------- */
@@ -92,11 +92,23 @@ html, body {
 .interactif { cursor: pointer; }
 .interactif:hover { filter: brightness(1.12); }
 
-/* ---------- Bandeau de test (étape 1 uniquement) ---------- */
-#bandeau-test {
-  height: 34px; box-sizing: border-box;
+/* ---------- Panneau formateur provisoire (étape 2) ---------- */
+#panneau-provisoire {
+  height: 128px; box-sizing: border-box; overflow: hidden;
   background: #101214; color: #ddd;
   font: 13px Arial, sans-serif; padding: 8px 14px;
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: 1fr auto; gap: 2px 24px;
 }
-#bandeau-test label { cursor: pointer; }
-#bandeau-test code { color: #ffcf1a; }
+#panneau-provisoire .ligne { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; white-space: nowrap; }
+#panneau-provisoire .ligne strong { width: 190px; }
+#panneau-provisoire .ligne span { color: #9aa; margin-left: 6px; }
+#panneau-provisoire .voies { grid-column: 1; grid-row: 1; }
+#panneau-provisoire .enclenchements { grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+#panneau-provisoire button {
+  font: inherit; color: #eee; background: #2b3036; border: 1px solid #4a5058;
+  border-radius: 4px; padding: 3px 9px; cursor: pointer;
+}
+#panneau-provisoire button:hover { background: #3a4048; }
+#panneau-provisoire label { cursor: pointer; }
+#journal { grid-column: 1; grid-row: 2; color: #8fd18f; font-size: 14px; }
+#journal.sans-effet { color: #ffb347; }
