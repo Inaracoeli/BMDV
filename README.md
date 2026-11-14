@@ -25,8 +25,12 @@ Chaque élément du TCO porte un identifiant `PREFIXE_TYPE_NOM` :
 
 Les pupitres « Circulation côté Alfa / Charlie » (`AA_`, `CC_`) sont réservés à l'écran formateur.
 
-L'état visuel se pilote par l'attribut `data-etat` (`blanc`, `jaune`, `rouge`, `bleu`, `vert`)
-ou `data-pos` pour les commutateurs (`ferme`/`ouvert`, `A`/`I`, `F`/`O`).
+L'état visuel se pilote par l'attribut `data-etat` (`blanc`, `jaune`, `rouge`, `bleu`, `vert`).
+Les commutateurs sont des TPL lumineux : `data-pos` (`ferme`/`ouvert`, `I`/`A`) oriente la manette,
+`data-etat="rouge"` allume le dôme (sémaphore fermé, Au E sur I). Les Vcm utilisent `data-pos` (`F`/`O`).
+
+Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une seule fois dans le
+`<defs>` de `tco.html` et colorés par les variables CSS `--face`, `--glow` et `--lit`.
 
 ## Avancement
 

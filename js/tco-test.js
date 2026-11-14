@@ -5,10 +5,6 @@
 // ==========================================================
 (function () {
   const ETATS_LUMINEUX = ['', 'blanc', 'jaune', 'rouge', 'bleu', 'vert'];
-  const POSITIONS = {
-    commut: (el) => (el.id === 'T_C_AUE' ? ['A', 'I'] : ['ferme', 'ouvert']),
-    vcm: () => ['F', 'O'],
-  };
 
   const modeTest = document.getElementById('mode-test');
   const info = document.getElementById('info-element');
@@ -19,7 +15,7 @@
   }
 
   document.querySelectorAll('svg [id]').forEach((el) => {
-    const cible = el.matches('.btn, .lamp, .zone, .tile, .commut, .bulletin, .saat, [id^="E_B_CL"]');
+    const cible = el.matches('.btn, .lamp, .zone, .tile, .commut, .vcm, .bulletin, .saat, [id^="E_B_CL"]');
     if (!cible) return;
 
     el.addEventListener('mouseenter', () => { info.textContent = el.id; });
@@ -29,17 +25,23 @@
       if (!modeTest.checked) return;
 
       if (el.classList.contains('commut')) {
-        el.dataset.pos = suivant(POSITIONS.commut(el), el.dataset.pos);
-      } else if (el.id.startsWith('E_B_VCM')) {
-        el.dataset.pos = suivant(POSITIONS.vcm(), el.dataset.pos);
-        el.querySelector('circle').setAttribute('cx', el.dataset.pos === 'O'
-          ? +el.querySelector('rect').getAttribute('x') + 34
-          : +el.querySelector('rect').getAttribute('x') + 12);
+        // TPL : allumé au rouge en position fermé (sémaphores) ou I (Au E)
+        const auE = el.id === 'T_C_AUE';
+        el.dataset.pos = suivant(auE ? ['A', 'I'] : ['ferme', 'ouvert'], el.dataset.pos);
+        const actif = el.dataset.pos === (auE ? 'I' : 'ferme');
+        el.dataset.etat = actif ? 'rouge' : '';
+      } else if (el.classList.contains('vcm')) {
+        el.dataset.pos = suivant(['F', 'O'], el.dataset.pos);
       } else if (el.classList.contains('bulletin')) {
         el.dataset.etat = el.dataset.etat === 'actif' ? '' : 'actif';
       } else if (el.classList.contains('saat')) {
         const t = el.querySelector('text');
         t.textContent = t.textContent ? '' : '123456';
+      } else if (el.classList.contains('zone')) {
+        // z1 et z2 ont deux contrôles qui s'allument ensemble
+        const etat = suivant(['', 'rouge'], el.dataset.etat);
+        document.querySelectorAll(`[data-zone="${el.dataset.zone}"]`)
+          .forEach((z) => { z.dataset.etat = etat; });
       } else {
         el.dataset.etat = suivant(ETATS_LUMINEUX, el.dataset.etat);
       }

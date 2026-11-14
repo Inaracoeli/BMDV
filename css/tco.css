@@ -3,32 +3,29 @@
    ========================================================== */
 
 :root {
-  --fond-tcc: #fbf9e4;
-  --cadre: #6b6b6b;
-  --fond-console: #d6e8d2;
-  --cadre-console: #5b7b5b;
-  --voie: #cc6600;
-  --voie-grise: #b4b4b4;
-  --zone: #444;
-  --texte: #333;
+  --police: "Bahnschrift", "DIN Alternate", "Roboto Condensed", "Arial Narrow", Arial, Helvetica, sans-serif;
+
+  --voie: #d9730d;
+  --voie-ombre: #a85608;
+  --voie-grise: #b9bcc0;
+  --texte: #2b2f33;
   --vert-zone: #2e6b1e;
-  --saat: #3a7bd5;
+  --saat: #2f6fd0;
+  --plaque: #1b1e21;
 
   /* Couleurs des états lumineux */
-  --eteint-bouton: #111;
-  --eteint-voyant: #2a2a2a;
-  --blanc: #f4f4f4;
-  --jaune: #ffd21f;
-  --rouge: #e3261d;
+  --blanc: #fbfbf5;
+  --jaune: #ffcf1a;
+  --rouge: #f0281c;
   --bleu: #2f7df6;
-  --vert: #31c24d;
+  --vert: #2fc650;
 }
 
 html, body {
   margin: 0;
   height: 100%;
-  background: #2b2f33;
-  font-family: Arial, Helvetica, sans-serif;
+  background: #17191c;
+  font-family: var(--police);
 }
 
 .tco {
@@ -38,86 +35,67 @@ html, body {
 }
 
 /* ---------- Textes ---------- */
-.lbl        { font: bold 13px Arial, sans-serif; fill: var(--texte); text-anchor: middle; }
-.lbl-sm     { font: bold 11px Arial, sans-serif; fill: var(--texte); text-anchor: middle; }
-.lbl-md     { font: bold 18px Arial, sans-serif; fill: var(--texte); text-anchor: middle; }
-.lbl-titre  { font: 17px Arial, sans-serif; fill: #111; text-anchor: middle; }
-.lbl-voie   { font: bold 46px Arial, sans-serif; fill: #444; text-anchor: middle; }
-.lbl-zone   { font: bold 24px Arial, sans-serif; fill: var(--vert-zone); text-anchor: middle; }
-.lbl-serif  { font: 46px Georgia, "Times New Roman", serif; fill: #444; text-anchor: middle; }
-.lbl-circ   { font: 23px Georgia, "Times New Roman", serif; fill: #555; text-anchor: middle; letter-spacing: 1px; }
-.lbl-ef     { font: bold 34px Arial, sans-serif; fill: #f39a2e; text-anchor: middle; }
-.lbl-saat   { font: bold 11px Arial, sans-serif; fill: var(--saat); }
-.lbl-saat-v { font: bold 15px "Courier New", monospace; fill: #123; text-anchor: middle; }
-.lbl-tile   { font: bold 10px Arial, sans-serif; fill: #111; text-anchor: middle; }
+.tco text   { font-family: var(--police); }
+.lbl        { font-weight: 700; font-size: 13px; fill: var(--texte); text-anchor: middle; letter-spacing: .5px; }
+.lbl-sm     { font-weight: 700; font-size: 10.5px; fill: var(--texte); text-anchor: middle; letter-spacing: .6px; }
+.lbl-md     { font-weight: 700; font-size: 18px; fill: var(--texte); text-anchor: middle; }
+.lbl-plaque { font-weight: 700; font-size: 16px; fill: #f2f2ee; text-anchor: middle; letter-spacing: 1.5px; }
+.lbl-titre  { font-weight: 700; font-size: 34px; fill: #f2f2ee; text-anchor: middle; letter-spacing: 6px; }
+.lbl-voie   { font-weight: 700; font-size: 46px; fill: #3a3e43; text-anchor: middle; }
+.lbl-zone   { font-weight: 700; font-size: 23px; fill: var(--vert-zone); text-anchor: middle; }
+.lbl-ef     { font-weight: 700; font-size: 32px; fill: #e8891c; text-anchor: middle; }
+.lbl-saat   { font-weight: 700; font-size: 11px; fill: var(--saat); letter-spacing: .5px; }
+.lbl-saat-v { font: 700 16px "Courier New", monospace; fill: #0d2a55; text-anchor: middle; letter-spacing: 2px; }
+.lbl-tile   { font-weight: 700; font-size: 9.5px; fill: #111; text-anchor: middle; }
 
-/* ---------- Boutons poussoirs (carrés) ---------- */
-.btn rect.face {
-  fill: var(--eteint-bouton);
-  stroke: #000;
-  stroke-width: 1;
-  filter: url(#ombre);
-  transition: fill .15s;
-}
-.btn[data-etat="blanc"] rect.face { fill: var(--blanc); }
-.btn[data-etat="jaune"] rect.face { fill: var(--jaune); }
-.btn[data-etat="rouge"] rect.face { fill: var(--rouge); }
-.btn[data-etat="bleu"]  rect.face { fill: var(--bleu);  }
-.btn[data-etat="vert"]  rect.face { fill: var(--vert);  }
-.btn[data-etat="jaune"] rect.face,
-.btn[data-etat="rouge"] rect.face,
-.btn[data-etat="bleu"]  rect.face,
-.btn[data-etat="blanc"] rect.face { filter: url(#halo); }
+/* ---------- États lumineux ----------
+   Les composants (boutons, voyants, zones, cases) sont dessinés une
+   seule fois dans <defs> ; leur couleur vient des variables --face
+   (couleur du verre) et --glow (intensité du halo), posées ici selon
+   l'attribut data-etat de l'élément. */
+.btn, .lamp, .zone, .tile { --glow: 0; }
+.btn  { --face: #14161a; }
+.lamp { --face: #2a2d31; }
+.zone { --face: #3b3f44; }
+.tile { --face: #33363b; }
 
-/* ---------- Voyants (ronds) ---------- */
-.lamp circle.verre {
-  fill: var(--eteint-voyant);
-  stroke: #222;
-  stroke-width: 3;
-  transition: fill .15s;
-}
-.lamp[data-etat="blanc"] circle.verre { fill: var(--blanc); filter: url(#halo); }
-.lamp[data-etat="jaune"] circle.verre { fill: var(--jaune); filter: url(#halo); }
-.lamp[data-etat="rouge"] circle.verre { fill: var(--rouge); filter: url(#halo); }
-.lamp[data-etat="bleu"]  circle.verre { fill: var(--bleu);  filter: url(#halo); }
-.lamp[data-etat="vert"]  circle.verre { fill: var(--vert);  filter: url(#halo); }
+[data-etat="blanc"] { --face: var(--blanc); --glow: .75; }
+[data-etat="jaune"] { --face: var(--jaune); --glow: .85; }
+[data-etat="rouge"] { --face: var(--rouge); --glow: .85; }
+[data-etat="bleu"]  { --face: var(--bleu);  --glow: .85; }
+[data-etat="vert"]  { --face: var(--vert);  --glow: .85; }
 
-/* ---------- Zones de voie (z1..z4, pédales) ---------- */
-.zone rect { fill: var(--zone); stroke: #222; stroke-width: 1; transition: fill .15s; }
-.zone[data-etat="rouge"] rect { fill: var(--rouge); }
-.zone[data-etat="blanc"] rect { fill: var(--blanc); }
-.zone[data-etat="jaune"] rect { fill: var(--jaune); }
+/* ---------- Commutateurs lumineux (TPL) ----------
+   Éteint : dôme neutre. data-etat="rouge" : dôme allumé au rouge
+   (sémaphore fermé, Au E sur I). */
+.commut { --lit: 0; }
+.commut[data-etat="rouge"] { --lit: 1; }
+.commut .manette { transition: transform .2s; }
+/* Sémaphores : manette vers le haut = fermé, vers le bas = ouvert */
+.commut[data-pos="ouvert"] .manette { transform: rotate(180deg); }
+/* Au E : manette vers le haut = I, vers le bas = A */
+.commut[data-pos="A"] .manette { transform: rotate(180deg); }
 
-/* ---------- Voyants carrés de la console (Point E) ---------- */
-.tile rect.face { fill: #3c3c3c; stroke: #222; stroke-width: 1; filter: url(#ombre); transition: fill .15s; }
-.tile[data-etat="blanc"] rect.face { fill: var(--blanc); }
-.tile[data-etat="jaune"] rect.face { fill: var(--jaune); }
-.tile[data-etat="rouge"] rect.face { fill: var(--rouge); }
-.tile[data-etat="vert"]  rect.face { fill: var(--vert);  }
-
-/* ---------- Commutateurs rotatifs ---------- */
-.commut .barre { transition: transform .2s; transform-box: view-box; }
-/* Sémaphores : index vers le haut = fermé, vers le bas = ouvert */
-.commut[data-pos="ouvert"] .barre { transform: rotate(180deg); }
-/* Au E : index vers le haut = I, vers le bas = A */
-.commut[data-pos="A"] .barre { transform: rotate(180deg); }
+/* ---------- Vcm (point E) ---------- */
+.vcm .pt { transition: transform .2s; }
+.vcm[data-pos="O"] .pt { transform: translateX(28px); }
 
 /* ---------- Bulletins (C / S / MV) ---------- */
-.bulletin path { fill: #fff; stroke: #333; stroke-width: 1.5; }
+.bulletin path { fill: #fff; stroke: #3a3e43; stroke-width: 1.5; stroke-linejoin: round; }
 .bulletin[data-etat="actif"] path { fill: var(--jaune); }
 
 /* ---------- Afficheurs SAAT ---------- */
-.saat rect { fill: #dbe7fb; stroke: #6a8fd0; stroke-width: 1.5; }
+.saat rect { fill: #eef4ff; stroke: #5b86d6; stroke-width: 1.5; }
 
 /* ---------- Interaction ---------- */
 .interactif { cursor: pointer; }
-.interactif:hover { opacity: .85; }
+.interactif:hover { filter: brightness(1.12); }
 
 /* ---------- Bandeau de test (étape 1 uniquement) ---------- */
 #bandeau-test {
   height: 34px; box-sizing: border-box;
-  background: #1d2023; color: #ddd;
+  background: #101214; color: #ddd;
   font: 13px Arial, sans-serif; padding: 8px 14px;
 }
 #bandeau-test label { cursor: pointer; }
-#bandeau-test code { color: #ffd21f; }
+#bandeau-test code { color: #ffcf1a; }
