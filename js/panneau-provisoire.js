@@ -56,7 +56,12 @@
     zoneEncl.append(label);
     cases[nom] = c;
   });
-  zoneEncl.append(bouton('Réinitialiser', { type: 'REINITIALISER' }));
+  const labelAide = document.createElement('label');
+  const caseAide = document.createElement('input');
+  caseAide.type = 'checkbox';
+  caseAide.addEventListener('change', () => moteur.agir({ type: 'REGLAGE', nom: 'aideReddition', actif: caseAide.checked }));
+  labelAide.append(caseAide, ' Aide : Sonnerie clignote si Reddition seule');
+  panneau.querySelector('.voies').append(labelAide, ' ', bouton('Réinitialiser', { type: 'REINITIALISER' }));
 
   moteur.abonner((etat, resultat) => {
     Object.entries(lignes).forEach(([voie, l]) => {
@@ -65,6 +70,7 @@
       l.etatAval.textContent = `${l.aval} : ${v.annonceEmise ? 'reddition jaune (train annoncé)' : 'rien reçu'}`;
     });
     Object.entries(cases).forEach(([nom, c]) => { c.checked = etat.enclenchements[nom]; });
+    caseAide.checked = etat.reglages.aideReddition;
     if (resultat) {
       journal.textContent = resultat.message;
       journal.className = resultat.ok ? '' : 'sans-effet';

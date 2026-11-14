@@ -45,6 +45,7 @@
       vcm: { 1: 'F', 2: 'F' },
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
+        aideReddition: true,         // si Reddition est pressée seule, le bouton Sonnerie clignote
       },
       // Enclenchements du block ; le formateur peut les lever pour créer un dérangement
       enclenchements: {
@@ -159,6 +160,11 @@
         if (!(a.nom in etat.enclenchements)) return sansEffet(`Enclenchement inconnu : ${a.nom}`);
         etat.enclenchements[a.nom] = !!a.actif;
         return ok(`Enclenchement « ${a.nom} » ${a.actif ? 'rétabli' : 'levé'}`);
+      },
+      REGLAGE(a) {
+        if (!(a.nom in etat.reglages)) return sansEffet(`Réglage inconnu : ${a.nom}`);
+        etat.reglages[a.nom] = !!a.actif;
+        return ok(`Réglage « ${a.nom} » ${a.actif ? 'activé' : 'désactivé'}`);
       },
       REINITIALISER() {
         etat = etatInitial();

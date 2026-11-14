@@ -92,8 +92,18 @@ html, body {
 .interactif { cursor: pointer; }
 .interactif:hover { filter: brightness(1.12); }
 
-/* Bouton tenu appuyé (action simultanée Sonnerie + Reddition) */
+/* Action simultanée Sonnerie + Reddition */
 .btn.appuye { filter: brightness(1.5); }
+.liaison { fill: none; stroke: #55595e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn .anneau {
+  fill: none; stroke: var(--voie); stroke-width: 3.5; stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 0; pointer-events: none;
+}
+.btn.appuye .anneau { opacity: 1; }
+.btn.relache .anneau { animation: anneau-vider var(--maintien, 3s) linear forwards; }
+.btn.indice .anneau { opacity: 1; stroke: var(--rouge); animation: anneau-clignoter .3s 5; }
+@keyframes anneau-vider { to { stroke-dashoffset: 100; } }
+@keyframes anneau-clignoter { 50% { opacity: 0; } }
 
 /* ---------- Mini guide ---------- */
 #guide {

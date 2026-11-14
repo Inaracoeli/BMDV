@@ -58,19 +58,42 @@ const TCO = (function () {
     const maintenu = {};
     const estAppuye = (id) => (maintenu[id] || 0) > Date.now();
 
+    // Anneau autour d'un bouton : plein tant qu'il est tenu, puis il se vide
+    // pendant le maintien ; il clignote pour signaler le bouton manquant.
+    function ajouterAnneau(id) {
+      const use = el(id).querySelector('use');
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('class', 'anneau');
+      r.setAttribute('x', use.getAttribute('x') - 31);
+      r.setAttribute('y', use.getAttribute('y') - 31);
+      r.setAttribute('width', 62); r.setAttribute('height', 62); r.setAttribute('rx', 9);
+      r.setAttribute('pathLength', 100);
+      r.style.setProperty('--maintien', MAINTIEN_MS + 'ms');
+      el(id).append(r);
+    }
+    function clignoter(id) {
+      const e = el(id);
+      e.classList.remove('indice');
+      void e.getBoundingClientRect(); // relance l'animation
+      e.classList.add('indice');
+      setTimeout(() => e.classList.remove('indice'), 1500);
+    }
+
     function appuyer(id, auContact) {
       const e = el(id);
       let minuterie;
       e.addEventListener('pointerdown', () => {
         clearTimeout(minuterie);
         maintenu[id] = Infinity;
+        e.classList.remove('relache', 'indice');
         e.classList.add('appuye');
         auContact();
       });
       const relacher = () => {
         if (maintenu[id] !== Infinity) return;
         maintenu[id] = Date.now() + MAINTIEN_MS;
-        minuterie = setTimeout(() => e.classList.remove('appuye'), MAINTIEN_MS);
+        e.classList.add('relache');
+        minuterie = setTimeout(() => e.classList.remove('appuye', 'relache'), MAINTIEN_MS);
       };
       e.addEventListener('pointerup', relacher);
       e.addEventListener('pointerleave', relacher);
@@ -79,7 +102,13 @@ const TCO = (function () {
 
     Object.entries(CABLAGE).forEach(([voie, c]) => {
       // Voie libre : action simultanée sur Sonnerie et Reddition (même colonne)
-      const rendre = () => moteur.agir({ type: 'B_REDDITION', voie, sonnerieAppuyee: estAppuye(c.sonnerieAnnonce) });
+      const rendre = () => {
+        const sonnerieAppuyee = estAppuye(c.sonnerieAnnonce);
+        const r = moteur.lire().reglages;
+        if (!sonnerieAppuyee && r.redditionAvecSonnerie && r.aideReddition) clignoter(c.sonnerieAnnonce);
+        moteur.agir({ type: 'B_REDDITION', voie, sonnerieAppuyee });
+      };
+      ajouterAnneau(c.sonnerieAnnonce);
       appuyer(c.reddition, rendre);
       appuyer(c.sonnerieAnnonce, () => {
         moteur.agir({ type: 'B_ARRET_SONNERIE', voie, sonnerie: 'annonce' });

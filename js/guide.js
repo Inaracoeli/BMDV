@@ -36,7 +36,7 @@
       qui: 'B', titre: 'Bravo rend voie libre à Alfa', position: 0.76, sema: 'ferme',
       actions: [
         'S\'assurer que le train est <b>complet</b> et annoter le registre.',
-        'Appuyer <b>en même temps</b> sur <b>Sonnerie</b> et <b>Reddition</b> côté Alfa.',
+        'Appuyer <b>en même temps</b> sur <b>Sonnerie</b> et <b>Reddition</b> côté Alfa (les deux boutons reliés par l\'accolade). À la souris : Sonnerie, puis Reddition avant que l\'anneau ne se vide.',
       ],
       effets: [['eteint', 'Reddition côté Alfa'], ['blanc', 'Voie libre d\'Alfa (chez Alfa)']],
     },
