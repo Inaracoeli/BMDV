@@ -120,12 +120,14 @@
   });
   const aide = caseACocher('Aide : Sonnerie clignote si Reddition seule',
     (actif) => moteur.agir({ type: 'REGLAGE', nom: 'aideReddition', actif }));
-  zoneEncl.append(aide.label, bouton('Réinitialiser', { type: 'REINITIALISER' }));
+  const auto = caseACocher('Alfa et Charlie automatiques',
+    (actif) => moteur.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif }));
+  zoneEncl.append(aide.label, auto.label, bouton('Réinitialiser', { type: 'REINITIALISER' }));
 
   // ---------- Liste des trains (reconstruite seulement quand elle change) ----------
   let signature = null;
   function afficherTrains(etat) {
-    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse, t.terminus, t.demarrage != null]));
+    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse, t.terminus, t.demarrage != null, t.attenteDepart]));
     if (s === signature) return;
     signature = s;
     zoneTrains.replaceChildren();
@@ -138,6 +140,7 @@
       const ou = document.createElement('span');
       nom.textContent = `Train ${t.numero} · ${t.origine} → ${t.destination}`;
       ou.textContent = `${t.voie}, ` + POSITIONS[Moteur.PARCOURS[t.etape].nom](p, t.voie)
+        + (t.attenteDepart ? ` — attend à ${t.origine} la voie libre de Bravo` : '')
         + (t.terminus ? ' — terminus, à quai' : '')
         + (t.attente ? (t.demarrage != null ? ' — se remet en marche' : ' — arrêté devant le signal fermé') : '')
         + (t.arrete ? (t.origine === 'Bravo' && t.etape === 4 ? ' — à quai, attend le départ' : ' — arrêté par le formateur') : '');
@@ -161,6 +164,7 @@
     });
     Object.entries(cases).forEach(([nom, c]) => { c.checked = etat.enclenchements[nom]; });
     aide.c.checked = etat.reglages.aideReddition;
+    auto.c.checked = etat.reglages.postesAutomatiques;
     Object.entries(champsDurees).forEach(([nom, champ]) => {
       if (document.activeElement !== champ) champ.value = etat.durees[nom] / 1000;
     });

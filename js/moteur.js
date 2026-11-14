@@ -64,6 +64,10 @@
         ouvert: false,            // état réel du signal
         bloque: false,            // bloqué fermé jusqu'à réception de voie libre
       },
+      // Postes automatiques : trains arrivés au poste aval dont la voie libre reste à rendre,
+      // et délai avant que le poste aval la rende
+      arrivesAval: 0,
+      delaiReddition: null,
       // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert
       carre: { ferme: false },
     };
@@ -81,6 +85,7 @@
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
         aideReddition: true,         // si Reddition est pressée seule, le bouton Sonnerie clignote
+        postesAutomatiques: false,   // Alfa et Charlie annoncent et rendent voie libre tout seuls
       },
       // Enclenchements du block ; le formateur peut les lever pour créer un dérangement
       enclenchements: {
@@ -103,19 +108,14 @@
       // ---------- Poste amont (joué par le formateur) ----------
       AMONT_ANNONCE(v, a) {
         const p = POSTES[a.voie];
-        if (v.annonceRecue) return sansEffet(`${p.amont} : annonce sans effet, voie libre non reçue de Bravo`);
-        v.annonceRecue = true;
-        v.sonnerieAnnonce = true;
+        if (!annoncerAmont(v)) return sansEffet(`${p.amont} : annonce sans effet, voie libre non reçue de Bravo`);
         return ok(`${p.amont} annonce un train à Bravo (${a.voie})`);
       },
 
       // ---------- Poste aval (joué par le formateur) ----------
       AVAL_REDDITION(v, a) {
         const p = POSTES[a.voie];
-        if (!v.annonceEmise) return sansEffet(`${p.aval} : reddition sans effet, aucun train annoncé par Bravo`);
-        v.annonceEmise = false;
-        v.sonnerieReddition = true;
-        v.sema.bloque = false;
+        if (!rendreAval(v)) return sansEffet(`${p.aval} : reddition sans effet, aucun train annoncé par Bravo`);
         return ok(`${p.aval} rend voie libre à Bravo (${a.voie})`);
       },
 
@@ -184,6 +184,45 @@
       },
     };
 
+    // Le poste amont annonce un train à Bravo (possible seulement s'il a voie libre)
+    function annoncerAmont(v) {
+      if (v.annonceRecue) return false;
+      v.annonceRecue = true;
+      v.sonnerieAnnonce = true;
+      return true;
+    }
+    // Le poste aval rend voie libre à Bravo (possible seulement si Bravo lui a annoncé le train)
+    function rendreAval(v) {
+      if (!v.annonceEmise) return false;
+      v.annonceEmise = false;
+      v.sonnerieReddition = true;
+      v.sema.bloque = false;
+      v.arrivesAval = Math.max(0, v.arrivesAval - 1);
+      v.delaiReddition = null;
+      return true;
+    }
+    // Postes automatiques : départ des trains après annonce, voie libre rendue à l'arrivée
+    const DELAI_REDDITION_AUTO = 3000;
+    function posteAutomatiques(dt, evenements) {
+      const auto = etat.reglages.postesAutomatiques;
+      etat.trains.forEach((t) => {
+        if (!t.attenteDepart) return;
+        const v = etat.voies[t.voie];
+        if (!auto) { t.attenteDepart = false; return; }
+        if (annoncerAmont(v)) {
+          t.attenteDepart = false;
+          evenements.push(`${t.origine} annonce le train ${t.numero} à Bravo et l'expédie (${t.voie})`);
+        }
+      });
+      if (!auto) return;
+      Object.entries(etat.voies).forEach(([voie, v]) => {
+        if (!(v.arrivesAval > 0 && v.annonceEmise)) { v.delaiReddition = null; return; }
+        if (v.delaiReddition == null) v.delaiReddition = DELAI_REDDITION_AUTO;
+        v.delaiReddition -= dt;
+        if (v.delaiReddition <= 0 && rendreAval(v)) evenements.push(`${POSTES[voie].aval} rend voie libre à Bravo (${voie})`);
+      });
+    }
+
     // Franchissement du sémaphore : fermeture automatique (aubinage), blocage, sonnerie
     function pedale(v) {
       v.sema.ouvert = false;
@@ -201,7 +240,7 @@
       // Le signal est franchissable si le sémaphore et le carré sont ouverts, ou sur autorisation
       const franchissable = () => t.franchir || (v.sema.ouvert && !v.carre.ferme);
       dt *= facteur;
-      while (dt > 0 && !t.terminus) {
+      while (dt > 0 && !t.terminus && !t.attenteDepart) {
         if (t.attente) {
           if (!franchissable()) { t.demarrage = null; return; }
           // Inertie : le train met quelques secondes à se remettre en marche
@@ -227,6 +266,7 @@
         t.etape += 1;
         if (t.etape >= PARCOURS.length) {
           etat.trains.splice(etat.trains.indexOf(t), 1);
+          v.arrivesAval += 1;
           evenements.push(`Train ${t.numero} arrivé à ${t.destination} (${t.voie})`);
           return;
         }
@@ -260,7 +300,14 @@
           vitesse: VITESSES[a.vitesse] ? a.vitesse : 'normale',
           etape, reste: etat.durees[PARCOURS[etape].nom],
           arrete: departBravo, attente: false, demarrage: null, franchir: false, terminus: false,
+          // Postes automatiques : le train attend à son origine que le poste ait voie libre pour l'annoncer
+          attenteDepart: !departBravo && etat.reglages.postesAutomatiques,
         });
+        if (!departBravo && etat.reglages.postesAutomatiques) {
+          const evenements = [];
+          posteAutomatiques(0, evenements);
+          return ok(evenements[0] || `Train ${numero} en attente à ${origine} : voie libre non reçue de Bravo (${voie})`);
+        }
         return ok(departBravo
           ? `Train ${numero} à quai à Bravo, prêt au départ vers ${destination} (${voie})`
           : `Train ${numero} parti de ${origine} pour ${destination} (${voie})`);
@@ -305,6 +352,7 @@
       // Écoulement du temps : appelé régulièrement par la page
       TEMPS(a) {
         const evenements = [];
+        posteAutomatiques(a.dt, evenements);
         etat.trains.slice().forEach((t) => { if (!t.arrete) avancer(t, a.dt, evenements); });
         return { ok: true, message: evenements.join(' · ') || null };
       },

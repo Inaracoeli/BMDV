@@ -242,6 +242,42 @@ essai('carré fermé avant l\'arrivée du train : pas d\'EAP, le train s\'arrêt
   assert.ok(!m.lire().trains[0].attente);
 });
 
+essai('postes automatiques : Alfa annonce au départ, Charlie rend voie libre à l\'arrivée', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: true });
+  const v = () => m.lire().voies.V1;
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '1' });
+  assert.ok(v().annonceRecue && v().sonnerieAnnonce && !m.lire().trains[0].attenteDepart);
+  // Second train : Alfa n'a pas voie libre, il attend à Alfa
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '2' });
+  assert.ok(m.lire().trains[1].attenteDepart);
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  temps(m, 14000); // le train 1 a franchi le signal
+  assert.strictEqual(m.lire().trains[1].etape, 0);
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ferme' });
+  m.agir({ type: 'B_ANNONCE', voie: 'V1' });
+  assert.ok(m.agir({ type: 'B_REDDITION', voie: 'V1', sonnerieAppuyee: true }).ok);
+  temps(m, 200); // voie libre rendue : Alfa annonce et expédie le train 2
+  assert.ok(v().annonceRecue && !m.lire().trains[1].attenteDepart);
+  temps(m, 20500); // le train 1 arrive à Charlie
+  assert.ok(v().annonceEmise);
+  temps(m, 3500); // Charlie rend voie libre après un court délai
+  assert.ok(!v().annonceEmise && v().sonnerieReddition && !v().sema.bloque);
+});
+
+essai('postes automatiques : Charlie ne rend pas voie libre si Bravo n\'a pas annoncé', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: true });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '1' });
+  temps(m, 45000);
+  const v = m.lire().voies.V1;
+  assert.ok(m.lire().trains.length === 0 && v.sema.bloque && v.arrivesAval === 1);
+  m.agir({ type: 'B_ANNONCE', voie: 'V1' }); // annonce tardive : Charlie rend alors voie libre
+  temps(m, 3500);
+  assert.ok(!m.lire().voies.V1.sema.bloque);
+});
+
 essai('réinitialisation', () => {
   const m = Moteur.creer();
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });

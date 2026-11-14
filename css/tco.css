@@ -31,7 +31,7 @@ html, body {
 .tco {
   display: block;
   width: 100vw;
-  height: calc(100vh - 178px);
+  height: calc(100vh - 190px);
 }
 
 /* ---------- Textes ---------- */
@@ -150,7 +150,7 @@ html, body {
 
 /* ---------- Panneau formateur provisoire (étape 2) ---------- */
 #panneau-provisoire {
-  height: 178px; box-sizing: border-box; overflow: hidden;
+  height: 190px; box-sizing: border-box; overflow: hidden;
   background: #101214; color: #ddd;
   font: 13px Arial, sans-serif; padding: 8px 14px;
   display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr auto auto; gap: 2px 28px;
