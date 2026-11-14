@@ -25,8 +25,14 @@ Chaque élément du TCO porte un identifiant `PREFIXE_TYPE_NOM` :
 
 Les pupitres « Circulation côté Alfa / Charlie » (`AA_`, `CC_`) sont réservés à l'écran formateur.
 
-L'état visuel se pilote par l'attribut `data-etat` (`blanc`, `jaune`, `rouge`, `bleu`, `vert`)
-ou `data-pos` pour les commutateurs (`ferme`/`ouvert`, `A`/`I`, `F`/`O`).
+L'état visuel se pilote par l'attribut `data-etat` (`blanc`, `jaune`, `rouge`, `bleu`, `vert`).
+Les commutateurs sont des TPL lumineux : `data-pos` (`ferme`/`ouvert`, `I`/`A`) oriente la manette,
+`data-etat="rouge"` allume le commutateur. Manette en bas = actif, allumé rouge (sémaphore fermé, Au E sur I) ;
+manette en haut = inactif, éteint (sémaphore ouvert, Au E sur A). Les Vcm sont des leviers articulés en haut,
+pointant en bas vers `F` ou `O` (`data-pos`). Le SAAT (suivi des trains) est un écran à part : `SAAT_*`.
+
+Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une seule fois dans le
+`<defs>` de `tco.html` et colorés par les variables CSS `--face`, `--glow` et `--lit`.
 
 ## Avancement
 
