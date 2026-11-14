@@ -12,7 +12,14 @@
     if (texte) e.textContent = texte;
     return e;
   };
-  const agir = (action) => moteur.agir(action);
+  // Toute action passe par ici : si le TCO ne répond pas, le formateur en est averti
+  const agir = (action) => {
+    if (!moteur.estConnecte()) {
+      $('journal').textContent = 'TCO non connecté : action non transmise.';
+      $('journal').className = 'sans-effet';
+    }
+    moteur.agir(action);
+  };
 
   // ---------- Onglets ----------
   document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
@@ -86,8 +93,7 @@
     $('destination-train').add(new Option(p, p, p === 'Charlie', p === 'Charlie'));
   });
   Object.keys(Moteur.VITESSES).forEach((v) => $('vitesse-train').add(new Option(v, v, v === 'normale', v === 'normale')));
-  $('nouveau-train').addEventListener('submit', (e) => {
-    e.preventDefault();
+  $('lancer-train').addEventListener('click', () => {
     agir({
       type: 'TRAIN_CREER', numero: $('numero-train').value,
       origine: $('origine-train').value, destination: $('destination-train').value, vitesse: $('vitesse-train').value,
@@ -196,8 +202,19 @@
     V2: incident('', { type: 'B_CARRE', voie: 'V2' }),
   };
   $('aide-reddition').addEventListener('change', (e) => agir({ type: 'REGLAGE', nom: 'aideReddition', actif: e.target.checked }));
+  // Réinitialisation en deux appuis, pour éviter une fausse manœuvre
+  let confirmation = null;
   $('reinitialiser').addEventListener('click', () => {
-    if (window.confirm('Réinitialiser le simulateur ? Les trains et les réglages seront effacés.')) agir({ type: 'REINITIALISER' });
+    const b = $('reinitialiser');
+    if (confirmation) {
+      clearTimeout(confirmation);
+      confirmation = null;
+      b.textContent = 'Réinitialiser le simulateur';
+      agir({ type: 'REINITIALISER' });
+      return;
+    }
+    b.textContent = 'Appuyer encore pour confirmer (trains et réglages effacés)';
+    confirmation = setTimeout(() => { confirmation = null; b.textContent = 'Réinitialiser le simulateur'; }, 4000);
   });
 
   // ---------- Mise à jour à chaque état reçu ----------

@@ -27,7 +27,7 @@
   </section>
 
   <section id="onglet-trains">
-    <form id="nouveau-train" class="carte">
+    <div id="nouveau-train" class="carte">
       <h2>Nouveau train</h2>
       <div class="champs">
         <label>Numéro <input id="numero-train" type="text" inputmode="numeric" placeholder="auto" autocomplete="off"></label>
@@ -35,8 +35,8 @@
         <label>De <select id="origine-train"></select></label>
         <label>À <select id="destination-train"></select></label>
       </div>
-      <button type="submit" class="principal">Lancer le train</button>
-    </form>
+      <button type="button" id="lancer-train" class="principal">Lancer le train</button>
+    </div>
     <div id="trains"></div>
     <details class="carte">
       <summary>Durées de parcours (secondes, à vitesse normale)</summary>
