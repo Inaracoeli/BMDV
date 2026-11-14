@@ -10,20 +10,32 @@ const TCO = (function () {
       reddition: 'A_B_RED', sonnerieAnnonce: 'A_B_SN1',
       annonce: 'C_B_ANN', voieLibre: 'C_V_VL', sonnerieReddition: 'C_B_SN1',
       commutateur: 'A_C_S1', voyantSemaphore: 'A_V_S1', voyantAnnonce: 'T_V_AN1',
-      approche: ['E_V_ZAP1'], zoneA: ['T_V_Z1', 'T_V_Z1B', 'E_V_Z1'], zoneB: ['T_V_Z3'],
+      zoneA: ['T_V_Z1', 'T_V_Z1B'], zoneB: ['T_V_Z3'],
+      voletApproche: 'E_V_ZAP1', voletZone: 'E_V_Z1',
       saatAnnonce: 'SAAT_AN1', saatCarre: 'SAAT_C1',
     },
     V2: {
       reddition: 'C_B_RED', sonnerieAnnonce: 'C_B_SN2',
       annonce: 'A_B_ANN', voieLibre: 'A_V_VL', sonnerieReddition: 'A_B_SN2',
       commutateur: 'C_C_S2', voyantSemaphore: 'C_V_S2', voyantAnnonce: 'T_V_AN2',
-      approche: ['E_V_ZAP2'], zoneA: ['T_V_Z2', 'T_V_Z2B', 'E_V_Z2'], zoneB: ['T_V_Z4'],
+      zoneA: ['T_V_Z2', 'T_V_Z2B'], zoneB: ['T_V_Z4'],
+      voletApproche: 'E_V_ZAP2', voletZone: 'E_V_Z2',
       saatAnnonce: 'SAAT_AN2', saatCarre: 'SAAT_C2',
     },
   };
 
   const el = (id) => document.getElementById(id);
   const allumer = (id, couleur) => { el(id).dataset.etat = couleur || ''; };
+
+  // Voyant électromécanique : le volet rouge tombe ou remonte, avec un clic
+  let premierAffichage = true;
+  function basculer(id, rouge) {
+    const e = el(id);
+    const voulu = rouge ? 'rouge' : '';
+    if ((e.dataset.etat || '') === voulu) return;
+    e.dataset.etat = voulu;
+    if (!premierAffichage) Sonnerie.clic();
+  }
 
   function afficher(etat) {
     let sonneAnnonce = false;
@@ -39,7 +51,8 @@ const TCO = (function () {
       // Occupation par les trains : annonce, zone d'approche, zones, SAAT
       const o = Moteur.occupation(etat, voie);
       allumer(c.voyantAnnonce, o.annonce && 'jaune');
-      c.approche.forEach((id) => allumer(id, o.approche && 'rouge'));
+      basculer(c.voletApproche, o.approche);
+      basculer(c.voletZone, o.zoneA);
       c.zoneA.forEach((id) => allumer(id, o.zoneA && 'rouge'));
       c.zoneB.forEach((id) => allumer(id, o.zoneB && 'rouge'));
       el(c.saatAnnonce).querySelector('text').textContent = o.saatAnnonce;
@@ -58,6 +71,7 @@ const TCO = (function () {
     el('E_B_VCM2').dataset.pos = etat.vcm[2];
 
     Sonnerie.regler({ annonce: sonneAnnonce, reddition: sonneReddition });
+    premierAffichage = false;
   }
 
   // Durée pendant laquelle un bouton relâché reste considéré comme appuyé :

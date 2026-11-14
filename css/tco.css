@@ -31,7 +31,7 @@ html, body {
 .tco {
   display: block;
   width: 100vw;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 178px);
 }
 
 /* ---------- Textes ---------- */
@@ -53,11 +53,10 @@ html, body {
    seule fois dans <defs> ; leur couleur vient des variables --face
    (couleur du verre) et --glow (intensité du halo), posées ici selon
    l'attribut data-etat de l'élément. */
-.btn, .lamp, .zone, .tile { --glow: 0; }
+.btn, .lamp, .zone { --glow: 0; }
 .btn  { --face: #14161a; }
 .lamp { --face: #2a2d31; }
 .zone { --face: #3b3f44; }
-.tile { --face: #33363b; }
 
 [data-etat="blanc"] { --face: var(--blanc); --glow: .75; }
 [data-etat="jaune"] { --face: var(--jaune); --glow: .85; }
@@ -75,6 +74,14 @@ html, body {
    Sémaphores : bas = fermé, haut = ouvert. Au E : bas = I, haut = A. */
 .commut[data-pos="ferme"] .manette,
 .commut[data-pos="I"] .manette { transform: rotate(180deg); }
+
+/* ---------- Voyants électromécaniques du point E ----------
+   Pas de lumière : un volet rouge tombe devant la face de repos, ou remonte. */
+.volet .face-rouge { fill: #a8362c; }
+.volet .face-repos { fill: #d6d2c4; }
+.volet .arete { stroke: #17191c; stroke-width: 1.5; }
+.volet .lame { transition: transform .22s cubic-bezier(.5, 0, .8, 1.3); }
+.volet[data-etat="rouge"] .lame { transform: translateY(50px); }
 
 /* ---------- Vcm (point E) ---------- */
 /* Levier articulé en haut, pointant en bas à gauche (F) ou en bas à droite (O) */
@@ -142,17 +149,19 @@ html, body {
 
 /* ---------- Panneau formateur provisoire (étape 2) ---------- */
 #panneau-provisoire {
-  height: 150px; box-sizing: border-box; overflow: hidden;
+  height: 178px; box-sizing: border-box; overflow: hidden;
   background: #101214; color: #ddd;
   font: 13px Arial, sans-serif; padding: 8px 14px;
-  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr auto; gap: 2px 28px;
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr auto auto; gap: 2px 28px;
 }
 #panneau-provisoire .ligne { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; white-space: nowrap; }
 #panneau-provisoire .voies .ligne strong { width: 190px; }
 #panneau-provisoire .ligne span { color: #9aa; margin-left: 6px; }
 #panneau-provisoire .voies { grid-column: 1; grid-row: 1; }
-#panneau-provisoire .trains { grid-column: 2; grid-row: 1; overflow-y: auto; color: #9aa; border-left: 1px solid #33373c; padding-left: 20px; }
-#panneau-provisoire .enclenchements { grid-column: 3; grid-row: 1 / 3; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+#panneau-provisoire .durees { grid-column: 1; grid-row: 2; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+#panneau-provisoire .durees input { width: 34px; padding: 2px 4px; text-align: right; }
+#panneau-provisoire .trains { grid-column: 2; grid-row: 1 / 3; overflow-y: auto; color: #9aa; border-left: 1px solid #33373c; padding-left: 20px; }
+#panneau-provisoire .enclenchements { grid-column: 3; grid-row: 1 / 4; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 #panneau-provisoire button, #panneau-provisoire input[type="text"], #panneau-provisoire select {
   font: inherit; color: #eee; background: #2b3036; border: 1px solid #4a5058;
   border-radius: 4px; padding: 3px 9px;
@@ -160,5 +169,5 @@ html, body {
 #panneau-provisoire button { cursor: pointer; }
 #panneau-provisoire button:hover { background: #3a4048; }
 #panneau-provisoire label { cursor: pointer; }
-#journal { grid-column: 1 / 3; grid-row: 2; color: #8fd18f; font-size: 14px; }
+#journal { grid-column: 1 / 3; grid-row: 3; color: #8fd18f; font-size: 14px; }
 #journal.sans-effet { color: #ffb347; }

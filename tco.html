@@ -21,7 +21,8 @@
   manette en haut = inactif (ouvert / A), éteint.
   Les zones portent aussi data-zone : z1 et z2 ont chacune deux contrôles
   (T_V_Z1 + T_V_Z1B, T_V_Z2 + T_V_Z2B).
-  Les composants répétés (c-btn, c-lamp, c-zone, c-tile, c-tpl...) sont définis
+  Les voyants du point E (classe volet) sont électromécaniques : un volet rouge tombe
+  ou remonte (data-etat="rouge"), sans halo. Les composants répétés (c-btn, c-lamp, c-zone, c-tpl...) sont définis
   une fois dans <defs> et colorés par les variables CSS --face / --glow / --lit.
 -->
 
@@ -95,14 +96,14 @@
       <rect width="68" height="22" rx="2.5" fill="url(#g-reflet)"/>
     </g>
 
-    <!-- Case lumineuse de la console (origine en haut à gauche, 46 x 50) -->
-    <g id="c-tile">
-      <rect x="-3" y="-3" width="52" height="56" rx="7" filter="url(#flou)" style="fill:var(--face);opacity:var(--glow,0)"/>
-      <rect x="-2" y="-2" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
-      <rect width="46" height="50" rx="2.5" style="fill:var(--face,#33363b)"/>
-      <rect width="46" height="50" rx="2.5" fill="url(#g-reflet)"/>
-      <rect y="50" width="46" height="16" rx="1.5" fill="#f4f4ee"/>
-    </g>
+    <!-- Voyants électromécaniques du point E : vitre terne et stries du voyant de carré -->
+    <linearGradient id="g-vitre" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset=".25" stop-color="#000" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".16"/>
+    </linearGradient>
+    <pattern id="p-stries" width="11.5" height="50" patternUnits="userSpaceOnUse">
+      <rect width="11.5" height="50" fill="#d6d2c4"/><rect x="3.5" width="5" height="50" fill="#1d1f22"/>
+    </pattern>
 
     <!-- Commutateur lumineux TPL : corps (centré) -->
     <g id="c-tpl">
@@ -361,15 +362,63 @@
     <path d="M1172 572 q-12 0 -12 12 v76 q0 8 -10 10 q10 2 10 10 v64 q0 12 12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
     <path d="M1690 572 q12 0 12 12 v76 q0 8 10 10 q-10 2 -10 10 v64 q0 12 -12 12" fill="none" stroke="#3a3e43" stroke-width="2"/>
 
-    <g id="E_V_ZAP1" class="tile"><title>E_V_ZAP1 — ZAP C1</title><use href="#c-tile" x="1186" y="578"/><text class="lbl-tile" x="1209" y="640">ZAP C1</text></g>
-    <g id="E_V_EAP1" class="tile"><title>E_V_EAP1 — EAP C1</title><use href="#c-tile" x="1241" y="578"/><text class="lbl-tile" x="1264" y="640">EAP C1</text></g>
-    <g id="E_V_C1" class="tile"><title>E_V_C1 — K C1</title><use href="#c-tile" x="1296" y="578"/><text class="lbl-tile" x="1319" y="640">K C1</text></g>
-    <g id="E_V_Z1" class="tile"><title>E_V_Z1 — Z1</title><use href="#c-tile" x="1351" y="578"/><text class="lbl-tile" x="1374" y="640">Z1</text></g>
+    <g id="E_V_ZAP1" class="volet"><title>E_V_ZAP1 — ZAP C1</title>
+      <rect x="1184" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1186" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1186" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1209" y="640">ZAP C1</text></g>
+    <g id="E_V_EAP1" class="volet"><title>E_V_EAP1 — EAP C1</title>
+      <rect x="1239" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1241" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1241" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1264" y="640">EAP C1</text></g>
+    <g id="E_V_C1" class="volet"><title>E_V_C1 — K C1</title>
+      <rect x="1294" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1296" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" fill="url(#p-stries)"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1296" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1319" y="640">K C1</text></g>
+    <g id="E_V_Z1" class="volet"><title>E_V_Z1 — Z1</title>
+      <rect x="1349" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1351" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1351" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1374" y="640">Z1</text></g>
 
-    <g id="E_V_Z2" class="tile"><title>E_V_Z2 — Z2</title><use href="#c-tile" x="1463" y="578"/><text class="lbl-tile" x="1486" y="640">Z2</text></g>
-    <g id="E_V_C2" class="tile"><title>E_V_C2 — K C2</title><use href="#c-tile" x="1518" y="578"/><text class="lbl-tile" x="1541" y="640">K C2</text></g>
-    <g id="E_V_EAP2" class="tile"><title>E_V_EAP2 — EAP C2</title><use href="#c-tile" x="1573" y="578"/><text class="lbl-tile" x="1596" y="640">EAP C2</text></g>
-    <g id="E_V_ZAP2" class="tile"><title>E_V_ZAP2 — ZAP C2</title><use href="#c-tile" x="1628" y="578"/><text class="lbl-tile" x="1651" y="640">ZAP C2</text></g>
+    <g id="E_V_Z2" class="volet"><title>E_V_Z2 — Z2</title>
+      <rect x="1461" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1463" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1463" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1486" y="640">Z2</text></g>
+    <g id="E_V_C2" class="volet"><title>E_V_C2 — K C2</title>
+      <rect x="1516" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1518" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" fill="url(#p-stries)"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1518" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1541" y="640">K C2</text></g>
+    <g id="E_V_EAP2" class="volet"><title>E_V_EAP2 — EAP C2</title>
+      <rect x="1571" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1573" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1573" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1596" y="640">EAP C2</text></g>
+    <g id="E_V_ZAP2" class="volet"><title>E_V_ZAP2 — ZAP C2</title>
+      <rect x="1626" y="576" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1628" y="578" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1628" y="628" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1651" y="640">ZAP C2</text></g>
 
     <!-- Chaîne clé E — Vcm1 — Au E — Vcm2 — clé F -->
     <g stroke="#3a3e43" stroke-width="2" stroke-dasharray="2 4" fill="none">
@@ -400,7 +449,13 @@
       <circle cx="1319" cy="680" r="4" fill="url(#g-chrome)" stroke="#33373c"/>
       <rect x="1296" y="724" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1319" y="736">Vcm 1</text></g>
 
-    <g id="E_V_AUE" class="tile"><title>E_V_AUE — Au E</title><use href="#c-tile" x="1410" y="674"/><text class="lbl-tile" x="1433" y="736">Au E</text></g>
+    <g id="E_V_AUE" class="volet"><title>E_V_AUE — Au E</title>
+      <rect x="1408" y="672" width="50" height="70" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
+      <svg x="1410" y="674" width="46" height="50"><rect width="46" height="50" fill="#17191c"/><g class="lame">
+        <rect y="-62" width="46" height="62" class="face-rouge"/><rect width="46" height="50" class="face-repos"/>
+        <line y1="0" x2="46" y2="0" class="arete"/></g>
+        <rect width="46" height="50" fill="url(#g-vitre)"/></svg>
+      <rect x="1410" y="724" width="46" height="16" rx="1.5" fill="#f4f4ee"/><text class="lbl-tile" x="1433" y="736">Au E</text></g>
 
     <g id="E_B_VCM2" class="vcm interactif" data-pos="F"><title>E_B_VCM2 — Vcm 2 (levier vers F ou O)</title>
       <rect x="1516" y="670" width="50" height="72" rx="4" fill="url(#g-metal-sombre)" stroke="#0e0f10" filter="url(#ombre)"/>
@@ -423,6 +478,7 @@
 <div id="panneau-provisoire">
   <div class="voies"></div>
   <div class="trains"></div>
+  <div class="durees"></div>
   <div class="enclenchements"><strong>Enclenchements</strong></div>
   <div id="journal">Prêt.</div>
 </div>

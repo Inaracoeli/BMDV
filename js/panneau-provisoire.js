@@ -13,6 +13,7 @@
   const zoneVoies = panneau.querySelector('.voies');
   const zoneTrains = panneau.querySelector('.trains');
   const zoneEncl = panneau.querySelector('.enclenchements');
+  const zoneDurees = panneau.querySelector('.durees');
 
   const ENCLENCHEMENTS = {
     blocageSemaphore: 'Blocage du sémaphore',
@@ -74,16 +75,40 @@
   const vitesse = document.createElement('select');
   vitesse.id = 'vitesse-train';
   Object.keys(Moteur.VITESSES).forEach((v) => vitesse.add(new Option(`vitesse ${v}`, v, v === 'normale', v === 'normale')));
-  const lancer = (voie) => () => {
-    const action = { type: 'TRAIN_CREER', voie, numero: numero.value, vitesse: vitesse.value };
-    numero.value = '';
-    return action;
+  const choixPoste = (id, defaut) => {
+    const s = document.createElement('select');
+    s.id = id;
+    ['Alfa', 'Bravo', 'Charlie'].forEach((p) => s.add(new Option(p, p, p === defaut, p === defaut)));
+    return s;
   };
+  const origine = choixPoste('origine-train', 'Alfa');
+  const destination = choixPoste('destination-train', 'Charlie');
   const titreTrain = document.createElement('strong');
   titreTrain.textContent = 'Nouveau train';
-  lancement.append(titreTrain, numero, vitesse,
-    bouton('Départ d\'Alfa (V1)', lancer('V1')), bouton('Départ de Charlie (V2)', lancer('V2')));
+  lancement.append(titreTrain, numero, 'de', origine, 'à', destination, vitesse, bouton('Lancer', () => {
+    const action = { type: 'TRAIN_CREER', numero: numero.value, origine: origine.value, destination: destination.value, vitesse: vitesse.value };
+    numero.value = '';
+    return action;
+  }));
   zoneVoies.append(lancement);
+
+  // ---------- Durées de parcours (secondes, à vitesse normale) ----------
+  const LIBELLES_DUREES = {
+    'canton-amont': 'ligne', annonce: 'annonce', approche: 'ZAP',
+    'zone-a': 'zone 1', 'zone-b': 'zone 2', 'canton-aval': 'ligne après Bravo',
+  };
+  const champsDurees = {};
+  const titreDurees = document.createElement('strong');
+  titreDurees.textContent = 'Durées (s)';
+  zoneDurees.append(titreDurees);
+  Object.entries(LIBELLES_DUREES).forEach(([nom, libelle]) => {
+    const champ = document.createElement('input');
+    champ.type = 'text';
+    champ.title = `Durée « ${libelle} » en secondes`;
+    champ.addEventListener('change', () => moteur.agir({ type: 'DUREE', nom, secondes: champ.value.replace(',', '.') }));
+    zoneDurees.append(' ' + libelle, champ);
+    champsDurees[nom] = champ;
+  });
 
   // ---------- Enclenchements et réglages ----------
   const cases = {};
@@ -99,7 +124,7 @@
   // ---------- Liste des trains (reconstruite seulement quand elle change) ----------
   let signature = null;
   function afficherTrains(etat) {
-    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse]));
+    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.vitesse, t.terminus]));
     if (s === signature) return;
     signature = s;
     zoneTrains.replaceChildren();
@@ -109,12 +134,18 @@
       const ligne = document.createElement('div');
       ligne.className = 'ligne';
       const nom = document.createElement('strong');
-      nom.textContent = `Train ${t.numero} (${t.voie})`;
       const ou = document.createElement('span');
-      ou.textContent = POSITIONS[Moteur.PARCOURS[t.etape].nom](p, t.voie)
-        + (t.attente ? ' — arrêté devant le signal fermé' : '') + (t.arrete ? ' — arrêté par le formateur' : '');
-      ligne.append(nom,
-        t.arrete ? bouton('Repartir', { type: 'TRAIN_REPARTIR', id: t.id }) : bouton('Arrêter', { type: 'TRAIN_ARRETER', id: t.id }));
+      nom.textContent = `Train ${t.numero} · ${t.origine} → ${t.destination}`;
+      ou.textContent = `${t.voie}, ` + POSITIONS[Moteur.PARCOURS[t.etape].nom](p, t.voie)
+        + (t.terminus ? ' — terminus, à quai' : '')
+        + (t.attente ? ' — arrêté devant le signal fermé' : '')
+        + (t.arrete ? (t.origine === 'Bravo' && t.etape === 4 ? ' — à quai, attend le départ' : ' — arrêté par le formateur') : '');
+      ligne.append(nom);
+      if (!t.terminus) {
+        ligne.append(t.arrete
+          ? bouton(t.origine === 'Bravo' && t.etape === 4 ? 'Donner le départ' : 'Repartir', { type: 'TRAIN_REPARTIR', id: t.id })
+          : bouton('Arrêter', { type: 'TRAIN_ARRETER', id: t.id }));
+      }
       if (t.attente && !t.franchir) ligne.append(bouton('Faire franchir le signal', { type: 'TRAIN_FRANCHIR', id: t.id }));
       ligne.append(bouton('Supprimer', { type: 'TRAIN_SUPPRIMER', id: t.id }), ou);
       zoneTrains.append(ligne);
@@ -129,6 +160,9 @@
     });
     Object.entries(cases).forEach(([nom, c]) => { c.checked = etat.enclenchements[nom]; });
     aide.c.checked = etat.reglages.aideReddition;
+    Object.entries(champsDurees).forEach(([nom, champ]) => {
+      if (document.activeElement !== champ) champ.value = etat.durees[nom] / 1000;
+    });
     afficherTrains(etat);
     if (resultat && resultat.message) {
       journal.textContent = resultat.message;

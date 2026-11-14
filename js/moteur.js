@@ -19,18 +19,33 @@
     V2: { amont: 'Charlie', aval: 'Alfa' },
   };
 
-  // Parcours d'un train, identique pour les deux voies (durées en millisecondes
-  // à vitesse normale). « signal » : le train s'arrête en fin d'étape si le
-  // sémaphore est fermé. zone-a / zone-b = z1 / z3 en voie 1, z2 / z4 en voie 2.
+  // Parcours d'un train, identique pour les deux voies. « signal » : le train
+  // s'arrête en fin d'étape si le sémaphore est fermé.
+  // zone-a / zone-b = z1 / z3 en voie 1, z2 / z4 en voie 2. Le quai est sur zone-a.
   const PARCOURS = [
-    { nom: 'canton-amont', duree: 5000 },
-    { nom: 'annonce', duree: 5000 },                // zone d'annonce
-    { nom: 'approche', duree: 3000, signal: true }, // ZAP, jusqu'au signal
-    { nom: 'pedale', duree: 1000 },                 // franchissement du signal
-    { nom: 'zone-a', duree: 5000 },
-    { nom: 'zone-b', duree: 5000 },
-    { nom: 'canton-aval', duree: 10000 },
+    { nom: 'canton-amont' },
+    { nom: 'annonce' },                 // zone d'annonce
+    { nom: 'approche', signal: true },  // ZAP, jusqu'au signal
+    { nom: 'pedale' },                  // franchissement du signal
+    { nom: 'zone-a' },
+    { nom: 'zone-b' },
+    { nom: 'canton-aval' },
   ];
+  const ETAPE = Object.fromEntries(PARCOURS.map((e, i) => [e.nom, i]));
+  // Durées par défaut en millisecondes, à vitesse normale (réglables par le formateur).
+  // 30 s d'un poste au signal de Bravo, 5 s par zone, 30 s de Bravo au poste suivant.
+  const DUREES = {
+    'canton-amont': 15000, annonce: 10000, approche: 5000, pedale: 1000,
+    'zone-a': 5000, 'zone-b': 5000, 'canton-aval': 30000,
+  };
+  // Voie empruntée selon l'origine et la destination
+  function voieDe(origine, destination) {
+    if (origine === destination) return null;
+    if (destination === 'Charlie') return 'V1';
+    if (destination === 'Alfa') return 'V2';
+    if (destination === 'Bravo') return origine === 'Alfa' ? 'V1' : origine === 'Charlie' ? 'V2' : null;
+    return null;
+  }
   const VITESSES = { lente: 0.5, normale: 1, rapide: 2 };
 
   function voieInitiale() {
@@ -54,7 +69,9 @@
   function etatInitial() {
     return {
       voies: { V1: voieInitiale(), V2: voieInitiale() },
-      trains: [],          // { id, numero, voie, vitesse, etape, reste, arrete, attente, franchir }
+      // { id, numero, origine, destination, voie, vitesse, etape, reste, arrete, attente, franchir, terminus }
+      trains: [],
+      durees: { ...DUREES },
       prochainTrain: 1,
       auE: 'A',
       vcm: { 1: 'F', 2: 'F' },
@@ -166,9 +183,8 @@
     // Fait avancer un train de dt millisecondes ; renvoie les événements survenus
     function avancer(t, dt, evenements) {
       const v = etat.voies[t.voie];
-      const p = POSTES[t.voie];
       dt *= VITESSES[t.vitesse] || 1;
-      while (dt > 0) {
+      while (dt > 0 && !t.terminus) {
         if (t.reste > dt) { t.reste -= dt; return; }
         dt -= t.reste;
         t.reste = 0;
@@ -181,10 +197,14 @@
         t.etape += 1;
         if (t.etape >= PARCOURS.length) {
           etat.trains.splice(etat.trains.indexOf(t), 1);
-          evenements.push(`Train ${t.numero} arrivé à ${p.aval} (${t.voie})`);
+          evenements.push(`Train ${t.numero} arrivé à ${t.destination} (${t.voie})`);
           return;
         }
-        t.reste = PARCOURS[t.etape].duree;
+        t.reste = etat.durees[PARCOURS[t.etape].nom];
+        if (PARCOURS[t.etape].nom === 'zone-a' && t.destination === 'Bravo') {
+          t.terminus = true;
+          evenements.push(`Train ${t.numero} terminus Bravo, à quai (${t.voie})`);
+        }
         if (PARCOURS[t.etape].nom === 'pedale') {
           t.franchir = false;
           pedale(v);
@@ -195,15 +215,31 @@
 
     const actionsGenerales = {
       // ---------- Trains (pilotés par le formateur) ----------
+      // { origine, destination } parmi Alfa, Bravo, Charlie (ou { voie } pour un parcours complet)
       TRAIN_CREER(a) {
-        if (!etat.voies[a.voie]) return sansEffet(`Voie inconnue : ${a.voie}`);
+        const origine = a.origine || (POSTES[a.voie] || {}).amont;
+        const destination = a.destination || (POSTES[a.voie] || {}).aval;
+        const voie = voieDe(origine, destination);
+        if (!voie) return sansEffet(`Parcours impossible : ${origine} → ${destination}`);
         const numero = String(a.numero || '').trim() || String(etat.prochainTrain);
+        // Un train au départ de Bravo attend à quai l'ordre de départ du formateur
+        const departBravo = origine === 'Bravo';
+        const etape = departBravo ? ETAPE['zone-a'] : 0;
         etat.trains.push({
-          id: etat.prochainTrain++, numero, voie: a.voie,
+          id: etat.prochainTrain++, numero, origine, destination, voie,
           vitesse: VITESSES[a.vitesse] ? a.vitesse : 'normale',
-          etape: 0, reste: PARCOURS[0].duree, arrete: false, attente: false, franchir: false,
+          etape, reste: etat.durees[PARCOURS[etape].nom],
+          arrete: departBravo, attente: false, franchir: false, terminus: false,
         });
-        return ok(`Train ${numero} parti de ${POSTES[a.voie].amont} (${a.voie})`);
+        return ok(departBravo
+          ? `Train ${numero} à quai à Bravo, prêt au départ vers ${destination} (${voie})`
+          : `Train ${numero} parti de ${origine} pour ${destination} (${voie})`);
+      },
+      DUREE(a) {
+        const ms = Math.round(Number(a.secondes) * 1000);
+        if (!(a.nom in etat.durees) || !(ms >= 0)) return sansEffet(`Durée invalide : ${a.nom}`);
+        etat.durees[a.nom] = ms;
+        return ok(`Durée « ${a.nom} » : ${ms / 1000} s`);
       },
       TRAIN_ARRETER(a) {
         const t = trouver(a.id);
@@ -303,5 +339,5 @@
     return o;
   }
 
-  return { creer, etatInitial, occupation, POSTES, PARCOURS, VITESSES };
+  return { creer, etatInitial, occupation, voieDe, POSTES, PARCOURS, DUREES, VITESSES };
 });

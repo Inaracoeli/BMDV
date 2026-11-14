@@ -96,9 +96,16 @@ essai('sémaphore bloqué : ouverture possible si l\'enclenchement est levé', (
 });
 
 const temps = (m, ms) => { for (let i = 0; i < ms / 100; i++) m.agir({ type: 'TEMPS', dt: 100 }); };
+// Durées courtes et fixes pour les essais, indépendantes des réglages par défaut
+const DUREES_ESSAI = { 'canton-amont': 5, annonce: 5, approche: 3, pedale: 1, 'zone-a': 5, 'zone-b': 5, 'canton-aval': 10 };
+const moteurEssai = () => {
+  const m = Moteur.creer();
+  Object.entries(DUREES_ESSAI).forEach(([nom, secondes]) => m.agir({ type: 'DUREE', nom, secondes }));
+  return m;
+};
 
 essai('un train parcourt la voie et actionne la pédale', () => {
-  const m = Moteur.creer();
+  const m = moteurEssai();
   const occ = () => Moteur.occupation(m.lire(), 'V1');
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
   m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
@@ -121,7 +128,7 @@ essai('un train parcourt la voie et actionne la pédale', () => {
 });
 
 essai('un train s\'arrête devant le signal fermé, repart à l\'ouverture', () => {
-  const m = Moteur.creer();
+  const m = moteurEssai();
   m.agir({ type: 'TRAIN_CREER', voie: 'V2', numero: '77' });
   temps(m, 20000);
   const t = () => m.lire().trains[0];
@@ -134,7 +141,7 @@ essai('un train s\'arrête devant le signal fermé, repart à l\'ouverture', () 
 });
 
 essai('outils formateur : arrêt, reprise, franchissement autorisé, vitesse, suppression', () => {
-  const m = Moteur.creer();
+  const m = moteurEssai();
   m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '1', vitesse: 'rapide' });
   const t = () => m.lire().trains[0];
   temps(m, 2500); // 5 s de parcours à vitesse double
@@ -150,6 +157,37 @@ essai('outils formateur : arrêt, reprise, franchissement autorisé, vitesse, su
   assert.ok(!t().attente && t().etape === 3);
   m.agir({ type: 'TRAIN_SUPPRIMER', id: t().id });
   assert.strictEqual(m.lire().trains.length, 0);
+});
+
+essai('terminus Bravo : le train reste à quai sur la première zone', () => {
+  const m = moteurEssai();
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  assert.ok(m.agir({ type: 'TRAIN_CREER', numero: '9', origine: 'Alfa', destination: 'Bravo' }).ok);
+  temps(m, 60000);
+  const t = m.lire().trains[0];
+  assert.ok(t.terminus && t.voie === 'V1' && Moteur.occupation(m.lire(), 'V1').zoneA);
+});
+
+essai('départ de Bravo : à quai jusqu\'à l\'ordre de départ, sans actionner la pédale', () => {
+  const m = moteurEssai();
+  assert.ok(m.agir({ type: 'TRAIN_CREER', numero: '10', origine: 'Bravo', destination: 'Alfa' }).ok);
+  const t = () => m.lire().trains[0];
+  assert.ok(t().voie === 'V2' && t().arrete && Moteur.occupation(m.lire(), 'V2').zoneA);
+  temps(m, 10000);
+  assert.ok(Moteur.occupation(m.lire(), 'V2').zoneA);
+  m.agir({ type: 'TRAIN_REPARTIR', id: t().id });
+  temps(m, 5500);
+  assert.ok(Moteur.occupation(m.lire(), 'V2').zoneB && !m.lire().voies.V2.sema.bloque);
+  temps(m, 16000);
+  assert.strictEqual(m.lire().trains.length, 0);
+});
+
+essai('parcours impossibles refusés, durées par défaut', () => {
+  const m = Moteur.creer();
+  assert.ok(!m.agir({ type: 'TRAIN_CREER', origine: 'Bravo', destination: 'Bravo' }).ok);
+  assert.strictEqual(m.lire().durees['canton-aval'], 30000);
+  const d = m.lire().durees;
+  assert.strictEqual(d['canton-amont'] + d.annonce + d.approche, 30000);
 });
 
 essai('réinitialisation', () => {
