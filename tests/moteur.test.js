@@ -31,10 +31,14 @@ function essai(nom, f) {
     assert.strictEqual(v().sema.manette, 'ferme');
 
     assert.ok(agir('B_ANNONCE').ok);
-    assert.ok(v().annonceEmise);
+    assert.ok(v().annonceEmise && v().sonnerieAval);
+    agir('AVAL_ARRET_SONNERIE');
+    assert.ok(!v().sonnerieAval);
     assert.ok(!agir('B_REDDITION').ok); // sans la sonnerie : sans effet
     assert.ok(agir('B_REDDITION', { sonnerieAppuyee: true }).ok);
-    assert.ok(!v().annonceRecue);
+    assert.ok(!v().annonceRecue && v().sonnerieAmont);
+    agir('AMONT_ARRET_SONNERIE');
+    assert.ok(!v().sonnerieAmont);
 
     // Sémaphore bloqué tant que l'aval n'a pas rendu voie libre
     assert.ok(!agir('B_SEMAPHORE').ok);
@@ -188,6 +192,23 @@ essai('parcours impossibles refusés, durées par défaut', () => {
   const d = m.lire().durees;
   assert.ok(d['canton-amont'] === 30000 && d['canton-aval'] === 30000);
   assert.ok(d.annonce === 10000 && d.approche === 10000 && d['zone-a'] === 10000 && d['zone-b'] === 10000);
+  assert.ok(d.pedale >= 3000 && d.pedale <= 5000 && d.redemarrage >= 3000 && d.redemarrage <= 5000);
+});
+
+essai('un temps sépare toujours le franchissement du signal de l\'attaque de la zone suivante', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'DUREE', nom: 'canton-amont', secondes: 1 });
+  m.agir({ type: 'DUREE', nom: 'annonce', secondes: 1 });
+  m.agir({ type: 'DUREE', nom: 'approche', secondes: 1 });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  temps(m, 3200); // le train vient de franchir le signal ouvert, sans s'arrêter
+  const occ = () => Moteur.occupation(m.lire(), 'V1');
+  assert.ok(m.lire().voies.V1.sema.bloque && !occ().zoneA && !occ().approche);
+  temps(m, 3000);
+  assert.ok(!occ().zoneA); // toujours pas sur la zone
+  temps(m, 1200);
+  assert.ok(occ().zoneA);
 });
 
 essai('inertie : le train met quelques secondes à repartir après l\'ouverture du signal', () => {

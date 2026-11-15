@@ -31,7 +31,7 @@ html, body {
 .tco {
   display: block;
   width: 100vw;
-  height: calc(100vh - 190px);
+  height: 100vh;
 }
 
 /* ---------- Textes ---------- */
@@ -147,28 +147,3 @@ html, body {
 #guide .schema .voie { fill: var(--voie); } #guide .schema .mat { stroke: #3a3e43; stroke-width: 2; }
 #guide .schema .feu { stroke: #25282c; stroke-width: 1.5; } #guide .schema .feu.ferme { fill: var(--rouge); } #guide .schema .feu.ouvert { fill: var(--vert); }
 #guide .schema .train { fill: #25282c; } #guide .schema .fleche { fill: none; stroke: #25282c; stroke-width: 2; }
-
-/* ---------- Panneau formateur provisoire (étape 2) ---------- */
-#panneau-provisoire {
-  height: 190px; box-sizing: border-box; overflow: hidden;
-  background: #101214; color: #ddd;
-  font: 13px Arial, sans-serif; padding: 8px 14px;
-  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr auto auto; gap: 2px 28px;
-}
-#panneau-provisoire .ligne { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; white-space: nowrap; }
-#panneau-provisoire .voies .ligne strong { width: 190px; }
-#panneau-provisoire .ligne span { color: #9aa; margin-left: 6px; }
-#panneau-provisoire .voies { grid-column: 1; grid-row: 1; }
-#panneau-provisoire .durees { grid-column: 1; grid-row: 2; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-#panneau-provisoire .durees input { width: 34px; padding: 2px 4px; text-align: right; }
-#panneau-provisoire .trains { grid-column: 2; grid-row: 1 / 3; overflow-y: auto; color: #9aa; border-left: 1px solid #33373c; padding-left: 20px; }
-#panneau-provisoire .enclenchements { grid-column: 3; grid-row: 1 / 4; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-#panneau-provisoire button, #panneau-provisoire input[type="text"], #panneau-provisoire select {
-  font: inherit; color: #eee; background: #2b3036; border: 1px solid #4a5058;
-  border-radius: 4px; padding: 3px 9px;
-}
-#panneau-provisoire button { cursor: pointer; }
-#panneau-provisoire button:hover { background: #3a4048; }
-#panneau-provisoire label { cursor: pointer; }
-#journal { grid-column: 1 / 3; grid-row: 3; color: #8fd18f; font-size: 14px; }
-#journal.sans-effet { color: #ffb347; }
