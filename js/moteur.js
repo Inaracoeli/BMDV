@@ -33,10 +33,11 @@
   ];
   const ETAPE = Object.fromEntries(PARCOURS.map((e, i) => [e.nom, i]));
   // Durées par défaut en millisecondes, à vitesse normale (réglables par le formateur).
-  // 30 s en ligne entre les gares, 10 s par zone en gare. « redemarrage » : inertie
+  // 30 s en ligne entre les gares, 10 s par zone en gare. « pedale » : temps entre le
+  // franchissement du signal et l'attaque de la zone suivante. « redemarrage » : inertie
   // d'un train arrêté devant un signal, entre l'ouverture et sa remise en marche.
   const DUREES = {
-    'canton-amont': 30000, annonce: 10000, approche: 10000, pedale: 1000,
+    'canton-amont': 30000, annonce: 10000, approche: 10000, pedale: 4000,
     'zone-a': 10000, 'zone-b': 10000, 'canton-aval': 30000, redemarrage: 4000,
   };
   // Voie empruntée selon l'origine et la destination

@@ -157,7 +157,7 @@
   // ---------- Durées ----------
   const LIBELLES_DUREES = {
     'canton-amont': 'Ligne avant Bravo', annonce: "Zone d'annonce", approche: "Zone d'approche (ZAP)",
-    'zone-a': 'Zone z1 / z2', 'zone-b': 'Zone z3 / z4', 'canton-aval': 'Ligne après Bravo',
+    pedale: 'Du signal à la zone suivante', 'zone-a': 'Zone z1 / z2', 'zone-b': 'Zone z3 / z4', 'canton-aval': 'Ligne après Bravo',
     redemarrage: 'Redémarrage devant un signal',
   };
   const champsDurees = {};
