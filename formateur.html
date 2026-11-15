@@ -19,13 +19,11 @@
   <div id="liaison" class="hors-ligne">TCO non connecté</div>
 </header>
 <div id="seance">
-  <label for="code-seance">Code de séance affiché en bas à droite du TCO</label>
-  <div class="ligne-seance">
-    <input id="code-seance" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
-    <button id="relier" type="button">Relier</button>
-  </div>
+  <div class="consigne">Code de séance à saisir sur le PC du TCO</div>
+  <div class="code-grand" id="code-seance"></div>
+  <div class="resume"><span>Séance <b id="code-court"></b></span><button id="nouvelle-seance" type="button">Nouvelle séance</button></div>
 </div>
-<div id="journal">Saisissez le code de séance du TCO.</div>
+<div id="journal">En attente du TCO.</div>
 
 <main>
   <section id="onglet-postes" class="actif">

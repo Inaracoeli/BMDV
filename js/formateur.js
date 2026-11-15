@@ -4,10 +4,7 @@
 // pupitres d'Alfa et de Charlie, trains, dérangements.
 // ==========================================================
 (function () {
-  // Code de séance : dans l'adresse (#CODE), sinon le dernier saisi sur ce téléphone
-  const codeAdresse = Liaison.normaliser(location.hash.slice(1));
-  const codeSeance = Liaison.codeValide(codeAdresse) ? codeAdresse : Liaison.normaliser(Liaison.lireCodeFormateur());
-  const moteur = Liaison.rejoindre(codeSeance);
+  const moteur = Liaison.rejoindre();
   const $ = (id) => document.getElementById(id);
   const creer = (balise, classe, texte) => {
     const e = document.createElement(balise);
@@ -18,36 +15,22 @@
   // Toute action passe par ici : si le TCO ne répond pas, le formateur en est averti
   const agir = (action) => {
     if (!moteur.estConnecte()) {
-      $('journal').textContent = moteur.code ? 'TCO non connecté : action non transmise. Vérifiez le code de séance.' : 'TCO non connecté : action non transmise.';
+      $('journal').textContent = 'TCO non connecté : action non transmise. Saisissez le code de séance sur le PC du TCO.';
       $('journal').className = 'sans-effet';
     }
     moteur.agir(action);
   };
 
-  // ---------- Séance ----------
-  const resume = creer('div', 'resume');
-  const changer = creer('button', '', 'Changer');
-  changer.type = 'button';
-  changer.addEventListener('click', () => $('seance').classList.remove('relie'));
-  resume.append(creer('span'), changer);
-  $('seance').append(resume);
-  if (moteur.code) {
-    $('code-seance').value = moteur.code;
-    resume.firstChild.innerHTML = `Séance <b>${moteur.code}</b>`;
-  }
-  function relier() {
-    const code = Liaison.normaliser($('code-seance').value);
-    if (!Liaison.codeValide(code)) {
-      $('journal').textContent = 'Code incomplet ou incorrect : 12 caractères, comme affiché sur le TCO.';
-      $('journal').className = 'sans-effet';
-      return;
-    }
-    Liaison.memoriserCodeFormateur(code);
-    location.hash = code;
-    location.reload();
-  }
-  $('relier').addEventListener('click', relier);
-  $('code-seance').addEventListener('keydown', (e) => { if (e.key === 'Enter') relier(); });
+  // ---------- Séance : le code créé par ce téléphone, à saisir sur le PC du TCO ----------
+  $('code-seance').textContent = moteur.code;
+  $('code-court').textContent = moteur.code;
+  // Nouvelle séance en deux appuis, pour éviter une fausse manœuvre
+  let confirmationSeance = null;
+  $('nouvelle-seance').addEventListener('click', () => {
+    if (confirmationSeance) { moteur.nouvelleSeance(); return; }
+    $('nouvelle-seance').textContent = 'Confirmer (nouveau code à saisir sur le PC)';
+    confirmationSeance = setTimeout(() => { confirmationSeance = null; $('nouvelle-seance').textContent = 'Nouvelle séance'; }, 4000);
+  });
 
   // ---------- Onglets ----------
   let schemaCentre = false;
@@ -300,14 +283,12 @@
   });
 
   // ---------- Témoin de liaison ----------
-  let replie = false;
   setInterval(() => {
     const ok = moteur.estConnecte();
     $('liaison').textContent = ok ? 'TCO connecté' : 'TCO non connecté';
     $('liaison').className = ok ? 'en-ligne' : 'hors-ligne';
-    // Une fois relié à distance, la saisie du code se replie
-    if (ok && moteur.distant && !replie) { $('seance').classList.add('relie'); replie = true; }
-    if (ok && $('journal').textContent === 'Saisissez le code de séance du TCO.') $('journal').textContent = 'Relié au TCO.';
-    if (!moteur.distant && ok && !replie) { $('seance').classList.add('relie'); resume.firstChild.textContent = 'Même navigateur'; replie = true; }
+    // Une fois relié, le grand code se replie ; il réapparaît si la liaison est perdue
+    $('seance').classList.toggle('relie', ok);
+    if (ok && $('journal').textContent === 'En attente du TCO.') $('journal').textContent = 'Relié au TCO.';
   }, 500);
 })();

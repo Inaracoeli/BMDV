@@ -27,8 +27,12 @@ la base de données, accessible uniquement après authentification.
 
 ## Utilisation
 
-1. Ouvrir `tco.html` sur le PC de l'élève. Un code de séance s'affiche en bas à droite (par exemple `K7Q2-M9XD-3FPA`).
-2. Ouvrir `formateur.html` sur le téléphone, saisir ce code et appuyer sur **Relier**.
+1. Ouvrir `formateur.html` sur le téléphone : il crée la séance et affiche un code (par exemple `K7Q2-M9XD-3FPA`).
+2. Ouvrir `tco.html` sur le PC de l'élève : saisir ce code dans la fenêtre « Séance » (elle s'ouvre au premier
+   démarrage ; ensuite, cliquer sur la pastille en bas à droite pour changer de code).
+
+Le moteur tourne sur le PC du TCO, pour que les trains continuent si le téléphone se met en veille. Le code reste
+mémorisé des deux côtés jusqu'à « Nouvelle séance » sur le téléphone.
 
 La liaison passe par la messagerie temps réel de Supabase (diffusion sur un canal propre à la séance, sans table ni
 compte ; configuration dans `js/config.js`, bibliothèque chargée depuis jsDelivr). Sans réseau, le TCO et l'écran
