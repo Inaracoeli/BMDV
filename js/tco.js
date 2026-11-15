@@ -79,6 +79,8 @@ const TCO = (function () {
     allumer('T_C_AUE', etat.auE === 'I' && 'rouge');
     el('E_B_VCM1').dataset.pos = etat.vcm[1];
     el('E_B_VCM2').dataset.pos = etat.vcm[2];
+    el('CONS_C_GARE').dataset.pos = etat.gare;
+    allumer('CONS_C_GARE', etat.gare === 'HS' && 'blanc');
 
     Sonnerie.regler({ annonce: sonneAnnonce, reddition: sonneReddition });
     premierAffichage = false;
@@ -87,6 +89,23 @@ const TCO = (function () {
   // Durée pendant laquelle un bouton relâché reste considéré comme appuyé :
   // permet l'action « simultanée » à la souris (Sonnerie puis Reddition).
   const MAINTIEN_MS = 3000;
+
+  // Message bref en haut de l'écran (fonctions à venir, commutateur de gare...)
+  let minuterieToast;
+  function toast(message) {
+    const t = el('toast');
+    t.textContent = message;
+    t.classList.add('visible');
+    clearTimeout(minuterieToast);
+    minuterieToast = setTimeout(() => t.classList.remove('visible'), 3500);
+  }
+
+  // Horloge du poste : heure réelle
+  function demarrerHorloge() {
+    const maj = () => { el('horloge-texte').textContent = new Date().toLocaleTimeString('fr-FR'); };
+    maj();
+    setInterval(maj, 1000);
+  }
 
   function brancher(moteur) {
     const clic = (id, action) => el(id).addEventListener('click', () => moteur.agir(action));
@@ -156,9 +175,16 @@ const TCO = (function () {
     clic('T_C_AUE', { type: 'B_AU_E' });
     clic('E_B_VCM1', { type: 'B_VCM', numero: 1 });
     clic('E_B_VCM2', { type: 'B_VCM', numero: 2 });
+    clic('CONS_C_GARE', { type: 'B_GARE' });
+    el('BTN_LIGNE').addEventListener('click', () => Schema.ouvrirFenetre(moteur.lire()));
+    el('BTN_REGISTRE').addEventListener('click', () => toast('Registre de circulation : à venir'));
+    demarrerHorloge();
 
     document.addEventListener('pointerdown', Sonnerie.deverrouiller, { once: true });
-    moteur.abonner(afficher);
+    moteur.abonner((etat, resultat, action) => {
+      afficher(etat);
+      if (action && action.type === 'B_GARE' && resultat) toast(resultat.message);
+    });
   }
 
   return { brancher, CABLAGE };

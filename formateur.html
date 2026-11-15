@@ -27,20 +27,29 @@
   </section>
 
   <section id="onglet-trains">
+    <div class="carte">
+      <h2>Vitesse du simulateur</h2>
+      <div id="acceleration" class="segmente"></div>
+    </div>
     <div id="nouveau-train" class="carte">
       <h2>Nouveau train</h2>
       <div class="champs">
         <label>Numéro <input id="numero-train" type="text" inputmode="numeric" placeholder="auto" autocomplete="off"></label>
-        <label>Vitesse <select id="vitesse-train"></select></label>
+        <label>Longueur <select id="longueur-train"></select></label>
         <label>De <select id="origine-train"></select></label>
         <label>À <select id="destination-train"></select></label>
+        <label>Vitesse maxi (km/h) <input id="vitesse-train" type="text" inputmode="numeric" autocomplete="off"></label>
       </div>
       <button type="button" id="lancer-train" class="principal">Lancer le train</button>
     </div>
+    <div class="carte">
+      <h2>Ligne</h2>
+      <div class="schema-defilant" id="schema"></div>
+    </div>
     <div id="trains"></div>
     <details class="carte">
-      <summary>Durées de parcours (secondes, à vitesse normale)</summary>
-      <div id="durees" class="champs"></div>
+      <summary>Distances de la ligne et réglages</summary>
+      <div id="distances"></div>
     </details>
   </section>
 
@@ -70,6 +79,7 @@
 
 <script src="js/moteur.js"></script>
 <script src="js/liaison.js"></script>
+<script src="js/schema.js"></script>
 <script src="js/formateur.js"></script>
 </body>
 </html>

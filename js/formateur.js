@@ -22,9 +22,16 @@
   };
 
   // ---------- Onglets ----------
+  let schemaCentre = false;
   document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('actif', x === b));
     document.querySelectorAll('main section').forEach((s) => s.classList.toggle('actif', s.id === 'onglet-' + b.dataset.onglet));
+    // À la première ouverture, le schéma de la ligne est centré sur Bravo
+    if (b.dataset.onglet === 'trains' && !schemaCentre) {
+      const d = $('schema');
+      d.scrollLeft = (d.scrollWidth - d.clientWidth) / 2;
+      schemaCentre = d.scrollWidth > 0;
+    }
   }));
 
   // ---------- Pupitres ----------
@@ -87,90 +94,117 @@
   pupitre('Charlie');
   $('auto').addEventListener('change', (e) => agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: e.target.checked }));
 
+  // ---------- Vitesse du simulateur ----------
+  const boutonsAcceleration = Moteur.ACCELERATIONS.map((facteur) => {
+    const b = creer('button', '', `×${facteur}`);
+    b.type = 'button';
+    b.addEventListener('click', () => agir({ type: 'ACCELERATION', facteur }));
+    $('acceleration').append(b);
+    return [facteur, b];
+  });
+
   // ---------- Nouveau train ----------
   ['Alfa', 'Bravo', 'Charlie'].forEach((p) => {
     $('origine-train').add(new Option(p, p, p === 'Alfa', p === 'Alfa'));
     $('destination-train').add(new Option(p, p, p === 'Charlie', p === 'Charlie'));
   });
-  Object.keys(Moteur.VITESSES).forEach((v) => $('vitesse-train').add(new Option(v, v, v === 'normale', v === 'normale')));
+  Object.entries(Moteur.TYPES).forEach(([l, t]) => $('longueur-train').add(new Option(t.libelle, l, l === '300', l === '300')));
+  // La vitesse proposée suit la longueur, tant que le formateur ne l'a pas modifiée
+  let vitesseSaisie = false;
+  const vitesseParDefaut = () => { if (!vitesseSaisie) $('vitesse-train').value = Moteur.TYPES[$('longueur-train').value].vmax; };
+  vitesseParDefaut();
+  $('longueur-train').addEventListener('change', vitesseParDefaut);
+  $('vitesse-train').addEventListener('input', () => { vitesseSaisie = $('vitesse-train').value.trim() !== ''; });
   $('lancer-train').addEventListener('click', () => {
     agir({
-      type: 'TRAIN_CREER', numero: $('numero-train').value,
-      origine: $('origine-train').value, destination: $('destination-train').value, vitesse: $('vitesse-train').value,
+      type: 'TRAIN_CREER', numero: $('numero-train').value, longueur: Number($('longueur-train').value),
+      vitesse: Number($('vitesse-train').value), origine: $('origine-train').value, destination: $('destination-train').value,
     });
     $('numero-train').value = '';
   });
 
   // ---------- Liste des trains ----------
-  const POSITIONS = {
-    'canton-amont': (t, p) => `en ligne, de ${p.amont} vers Bravo`,
-    annonce: () => "en zone d'annonce",
-    approche: () => "en zone d'approche",
-    pedale: () => 'franchit le signal',
-    'zone-a': (t) => (t.voie === 'V1' ? 'sur z1' : 'sur z2'),
-    'zone-b': (t) => (t.voie === 'V1' ? 'sur z3' : 'sur z4'),
-    'canton-aval': (t, p) => `en ligne, de Bravo vers ${p.aval}`,
-  };
-  const aQuaiAuDepart = (t) => t.origine === 'Bravo' && t.arrete && Moteur.PARCOURS[t.etape].nom === 'zone-a';
-  function situation(t) {
-    const p = Moteur.POSTES[t.voie];
+  // Les cartes sont reconstruites quand la situation d'un train change ; PK et vitesse sont mis à jour en continu
+  function situation(t, p) {
     if (t.attenteDepart) return [`Attend à ${t.origine} la voie libre de Bravo`, true];
     if (t.terminus) return ['Terminus, à quai à Bravo', false];
-    if (aQuaiAuDepart(t)) return ['À quai à Bravo, attend le départ', true];
-    const ou = `${t.voie}, ${POSITIONS[Moteur.PARCOURS[t.etape].nom](t, p)}`;
-    if (t.arrete) return [`${ou} — arrêté par le formateur`, true];
-    if (t.attente) return [`${ou} — ${t.demarrage != null ? 'se remet en marche' : 'arrêté devant le signal fermé'}`, true];
-    return [ou, false];
+    if (t.aQuai) return ['À quai à Bravo, attend le départ', true];
+    if (t.arrete && t.urgence) return [`${t.voie}, ${p.libelle} — arrêt d'urgence après franchissement du signal fermé`, true];
+    if (t.arrete) return [`${t.voie}, ${p.libelle} — ${t.v > 0 ? 'freine sur ordre du formateur' : 'arrêté par le formateur'}`, true];
+    if (p.devantSignal) return [`${t.voie}, ${p.libelle} — ${p.redemarre ? 'se remet en marche' : 'arrêté devant le signal fermé'}`, true];
+    return [`${t.voie}, ${p.libelle}`, false];
   }
   let signature = null;
+  let champsPK = {};
   function afficherTrains(etat) {
     $('nb-trains').textContent = etat.trains.length || '';
-    const s = JSON.stringify(etat.trains.map((t) => [t.id, t.etape, t.arrete, t.attente, t.franchir, t.terminus, t.demarrage != null, t.attenteDepart]));
-    if (s === signature) return;
-    signature = s;
-    $('trains').replaceChildren(...etat.trains.map((t) => {
-      const carte = creer('div', 'carte train');
-      const entete = creer('div', 'entete');
-      entete.append(creer('span', 'numero', `Train ${t.numero}`), creer('span', 'trajet', `${t.origine} → ${t.destination} · ${t.vitesse}`));
-      const [texte, alerte] = situation(t);
-      const avancement = creer('div', 'avancement');
-      const barre = creer('i');
-      barre.style.width = `${Math.round(((t.etape + (t.attenteDepart ? 0 : 0.5)) / Moteur.PARCOURS.length) * 100)}%`;
-      avancement.append(barre);
-      const boutons = creer('div', 'boutons');
-      const bouton = (libelle, type) => {
-        const b = creer('button', '', libelle);
-        b.addEventListener('click', () => agir({ type, id: t.id }));
-        boutons.append(b);
-      };
-      if (!t.terminus && !t.attenteDepart) {
-        if (t.arrete) bouton(aQuaiAuDepart(t) ? 'Donner le départ' : 'Repartir', 'TRAIN_REPARTIR');
-        else bouton('Arrêter', 'TRAIN_ARRETER');
-      }
-      if (t.attente && !t.franchir && t.demarrage == null) bouton('Faire franchir le signal', 'TRAIN_FRANCHIR');
-      bouton('Supprimer', 'TRAIN_SUPPRIMER');
-      carte.append(entete, creer('div', 'position' + (alerte ? ' alerte' : ''), texte), avancement, boutons);
-      return carte;
-    }));
+    const infos = etat.trains.map((t) => [t, Moteur.position(etat, t)]);
+    const s = JSON.stringify(infos.map(([t, p]) => [t.id, situation(t, p), t.franchir]));
+    if (s !== signature) {
+      signature = s;
+      champsPK = {};
+      $('trains').replaceChildren(...infos.map(([t, p]) => {
+        const carte = creer('div', 'carte train');
+        const entete = creer('div', 'entete');
+        entete.append(creer('span', 'numero', `Train ${t.numero}`),
+          creer('span', 'trajet', `${t.origine} → ${t.destination} · ${t.longueur} m`));
+        const [texte, alerte] = situation(t, p);
+        const pk = creer('div', 'pk');
+        champsPK[t.id] = pk;
+        const boutons = creer('div', 'boutons');
+        const bouton = (libelle, type) => {
+          const b = creer('button', '', libelle);
+          b.addEventListener('click', () => agir({ type, id: t.id }));
+          boutons.append(b);
+        };
+        if (!t.terminus && !t.attenteDepart) {
+          if (t.arrete) bouton(t.aQuai ? 'Donner le départ' : 'Repartir', 'TRAIN_REPARTIR');
+          else bouton('Arrêter', 'TRAIN_ARRETER');
+        }
+        if (p.devantSignal && !t.franchir && !p.redemarre) bouton('Faire franchir le signal', 'TRAIN_FRANCHIR');
+        bouton('Supprimer', 'TRAIN_SUPPRIMER');
+        carte.append(entete, creer('div', 'position' + (alerte ? ' alerte' : ''), texte), pk, boutons);
+        return carte;
+      }));
+    }
+    infos.forEach(([t, p]) => {
+      if (!champsPK[t.id]) return;
+      champsPK[t.id].textContent = t.attenteDepart ? '' : `Tête PK ${p.pkTete} · queue PK ${p.pkQueue} · ${p.kmh} km/h`;
+    });
   }
 
-  // ---------- Durées ----------
-  const LIBELLES_DUREES = {
-    'canton-amont': 'Ligne avant Bravo', annonce: "Zone d'annonce", approche: "Zone d'approche (ZAP)",
-    pedale: 'Du signal à la zone suivante', 'zone-a': 'Zone z1 / z2', 'zone-b': 'Zone z3 / z4', 'canton-aval': 'Ligne après Bravo',
-    redemarrage: 'Redémarrage devant un signal',
+  // ---------- Distances de la ligne ----------
+  const LIBELLES_LIGNE = {
+    ligneAvant: "Pleine ligne avant la zone d'annonce", annonce: "Zone d'annonce", approche: "Zone d'approche (ZAP)",
+    signalZone: 'Du signal à la zone suivante', zoneA: 'Première zone de gare', zoneB: 'Seconde zone de gare',
+    ligneApres: 'Pleine ligne après Bravo', quaiFin: 'Fin de quai, après le signal', quaiLongueur: 'Longueur du quai',
   };
-  const champsDurees = {};
-  Object.entries(LIBELLES_DUREES).forEach(([nom, libelle]) => {
+  const champsLigne = [];
+  const champ = (parent, libelle, auChangement) => {
     const label = creer('label', '', libelle);
-    const champ = creer('input');
-    champ.type = 'text';
-    champ.inputMode = 'decimal';
-    champ.addEventListener('change', () => agir({ type: 'DUREE', nom, secondes: champ.value.replace(',', '.') }));
-    label.append(champ);
-    $('durees').append(label);
-    champsDurees[nom] = champ;
+    const c = creer('input');
+    c.type = 'text';
+    c.inputMode = 'numeric';
+    c.addEventListener('change', () => auChangement(c.value.replace(',', '.')));
+    label.append(c);
+    parent.append(label);
+    return c;
+  };
+  [['V1', 'Voie 1 · Alfa → Charlie (z1, z3)'], ['V2', 'Voie 2 · Charlie → Alfa (z2, z4)']].forEach(([voie, titre]) => {
+    $('distances').append(creer('h3', '', `${titre} — mètres`));
+    const grille = creer('div', 'champs');
+    Object.entries(LIBELLES_LIGNE).forEach(([nom, libelle]) => {
+      if (voie === 'V2' && nom === 'ligneApres') return;
+      const c = champ(grille, libelle, (m) => agir({ type: 'LIGNE', voie, nom, metres: m }));
+      champsLigne.push([c, voie, nom]);
+    });
+    $('distances').append(grille);
+    if (voie === 'V2') $('distances').append(creer('p', 'derive', "La pleine ligne après Bravo en voie 2 se déduit de la voie 1, pour retomber sur Alfa."));
   });
+  $('distances').append(creer('h3', '', 'Trains'));
+  const grilleTrains = creer('div', 'champs');
+  const champRedemarrage = champ(grilleTrains, 'Redémarrage devant un signal (s)', (s) => agir({ type: 'REDEMARRAGE', secondes: s }));
+  $('distances').append(grilleTrains);
 
   // ---------- Dérangements ----------
   const ENCLENCHEMENTS = {
@@ -223,9 +257,10 @@
     $('auto').checked = etat.reglages.postesAutomatiques;
     $('aide-reddition').checked = etat.reglages.aideReddition;
     Object.entries(cases).forEach(([nom, c]) => { c.checked = etat.enclenchements[nom]; });
-    Object.entries(champsDurees).forEach(([nom, champ]) => {
-      if (document.activeElement !== champ) champ.value = etat.durees[nom] / 1000;
-    });
+    champsLigne.forEach(([c, voie, nom]) => { if (document.activeElement !== c) c.value = etat.ligne[voie][nom]; });
+    if (document.activeElement !== champRedemarrage) champRedemarrage.value = etat.redemarrage;
+    boutonsAcceleration.forEach(([facteur, b]) => b.classList.toggle('actif', etat.acceleration === facteur));
+    $('schema').innerHTML = Schema.svg(etat, { trains: true });
     Object.entries(carres).forEach(([voie, b]) => {
       b.textContent = `${etat.voies[voie].carre.ferme ? 'Ouvrir' : 'Fermer'} le carré C${voie[1]}`;
     });

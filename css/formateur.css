@@ -114,12 +114,27 @@ details[open] summary { margin-bottom: 10px; }
 .voyant[data-etat="blanc"] b { background: var(--blanc); box-shadow: 0 0 8px var(--blanc); }
 .voyant[data-etat="jaune"] b { background: var(--jaune); box-shadow: 0 0 8px var(--jaune); }
 
+/* ---------- Vitesse du simulateur, schéma, distances ---------- */
+.segmente { display: flex; border: 1px solid #4a5058; border-radius: 6px; overflow: hidden; }
+.segmente button {
+  flex: 1; min-height: 44px; border: 0; border-radius: 0; background: #2b3036; color: var(--texte);
+  font-weight: 700; cursor: pointer;
+}
+.segmente button + button { border-left: 1px solid #4a5058; }
+.segmente button.actif { background: var(--orange); color: #fff; }
+.schema-defilant { overflow-x: auto; background: #f7f4e4; border-radius: 6px; -webkit-overflow-scrolling: touch; }
+.schema-defilant svg { display: block; width: 1100px; height: auto; }
+#distances h3 { font-size: 13px; letter-spacing: 1px; color: var(--discret); margin: 12px 0 6px; text-transform: uppercase; }
+#distances .champs { margin-bottom: 4px; }
+#distances .derive { font-size: 13px; color: var(--discret); margin: 0 0 8px; }
+
 /* ---------- Trains ---------- */
 .train { border-left: 4px solid var(--orange); }
 .train .entete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .train .numero { font-weight: 700; font-size: 20px; letter-spacing: 1px; }
 .train .trajet { color: var(--discret); font-size: 14px; }
-.train .position { margin: 4px 0 10px; }
+.train .position { margin: 4px 0 2px; }
+.train .pk { font-size: 13px; color: var(--discret); margin-bottom: 10px; font-variant-numeric: tabular-nums; }
 .train .position.alerte { color: #ffb347; }
 .train .avancement { height: 6px; background: #15171a; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
 .train .avancement i { display: block; height: 100%; background: var(--orange); }

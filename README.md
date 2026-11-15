@@ -14,11 +14,12 @@ la base de données, accessible uniquement après authentification.
 | `tco.html` | TCO du poste B (écran élève). Héberge le moteur. |
 | `formateur.html` | Écran formateur, pour téléphone : pupitres d'Alfa et de Charlie, trains, dérangements |
 | `css/tco.css`, `css/formateur.css` | Styles des deux écrans |
-| `js/moteur.js` | Moteur : block, trains, enclenchements. Sans dépendance au navigateur. |
+| `js/moteur.js` | Moteur : block, trains (position en mètres, longueur, vitesse, freinage), enclenchements. Sans dépendance au navigateur. |
 | `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
 | `js/poste.js` | Démarrage de la page du TCO : moteur, horloge, liaison |
 | `js/liaison.js` | Échange d'état et d'actions entre le TCO et l'écran formateur |
 | `js/formateur.js` | Écran formateur |
+| `js/schema.js` | Schéma simplifié de la ligne avec les PK (fenêtre LIGNE du TCO, onglet Trains du formateur) |
 | `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
 | `js/guide.js` | Mini guide « Faire circuler un train », ouvert par le bouton GUIDE |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
@@ -56,3 +57,21 @@ Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une s
 - [x] Étape 4 — Écran formateur (même navigateur)
 - [ ] Étape 5 — Synchronisation temps réel et authentification
 - [ ] Étape 6 — Scénarios et dérangements
+
+## Ligne
+
+PK croissants dans le sens impair (voie 1, Alfa → Charlie). Valeurs par défaut, réglables depuis l'écran formateur :
+
+| Repère | Voie 1 (Alfa → Charlie) | Voie 2 (Charlie → Alfa) |
+|---|---|---|
+| Gare d'origine | Alfa PK 100,000 | Charlie PK 121,000 |
+| Début de la zone d'annonce | PK 103,000 | PK 118,350 |
+| Début de la ZAP | PK 108,500 | PK 112,850 |
+| Signal | C1/S1 PK 110,000 | C2/S2 PK 111,350 |
+| Zone après le signal | z1 de 110,100 à 110,900 | z2 de 111,250 à 110,500 |
+| Aiguille | E PK 110,900 | F PK 110,500 |
+| Zone suivante | z3 jusqu'à 111,350 | z4 jusqu'à 110,000 |
+| Quai (400 m) | PK 110,050 à 110,450, le long de z1 | PK 110,050 à 110,450, le long de z4 |
+
+Trains : 50 m (engin seul, 120 km/h), 300 m (voyageurs, 160 km/h), 750 m (fret, 100 km/h).
+Le simulateur tourne en temps réel ou accéléré (×2, ×5, ×10, ×20).

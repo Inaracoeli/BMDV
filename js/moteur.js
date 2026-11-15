@@ -8,6 +8,10 @@
 // Chaque voie est décrite du point de vue de B :
 //   amont = poste qui annonce le train à B   (V1 : Alfa,    V2 : Charlie)
 //   aval  = poste à qui B annonce le train   (V1 : Charlie, V2 : Alfa)
+//
+// Les trains se déplacent sur une ligne graduée en mètres : position de
+// la tête, longueur, vitesse en km/h, accélération et freinage. Une zone
+// est occupée dès qu'une partie du train la recouvre.
 // ==========================================================
 (function (racine, fabrique) {
   if (typeof module === 'object' && module.exports) module.exports = fabrique();
@@ -19,27 +23,63 @@
     V2: { amont: 'Charlie', aval: 'Alfa' },
   };
 
-  // Parcours d'un train, identique pour les deux voies. « signal » : le train
-  // s'arrête en fin d'étape si le sémaphore est fermé.
-  // zone-a / zone-b = z1 / z3 en voie 1, z2 / z4 en voie 2. Le quai est sur zone-a.
-  const PARCOURS = [
-    { nom: 'canton-amont' },
-    { nom: 'annonce' },                 // zone d'annonce
-    { nom: 'approche', signal: true },  // ZAP, jusqu'au signal
-    { nom: 'pedale' },                  // franchissement du signal
-    { nom: 'zone-a' },
-    { nom: 'zone-b' },
-    { nom: 'canton-aval' },
-  ];
-  const ETAPE = Object.fromEntries(PARCOURS.map((e, i) => [e.nom, i]));
-  // Durées par défaut en millisecondes, à vitesse normale (réglables par le formateur).
-  // 30 s en ligne entre les gares, 10 s par zone en gare. « pedale » : temps entre le
-  // franchissement du signal et l'attaque de la zone suivante. « redemarrage » : inertie
-  // d'un train arrêté devant un signal, entre l'ouverture et sa remise en marche.
-  const DUREES = {
-    'canton-amont': 30000, annonce: 10000, approche: 10000, pedale: 4000,
-    'zone-a': 10000, 'zone-b': 10000, 'canton-aval': 30000, redemarrage: 4000,
+  // ---------- Géométrie de la ligne ----------
+  // Longueurs en mètres, dans le sens de circulation de chaque voie. Les PK
+  // croissent dans le sens impair (V1, Alfa → Charlie). Avec ces valeurs :
+  //   V1 : Alfa PK 100,000 · annonce 103,000 · ZAP 108,500 · C1/S1 110,000 ·
+  //        z1 110,100 · aiguille E 110,900 · fin z3 111,350 · Charlie 121,000
+  //   V2 : Charlie PK 121,000 · annonce 118,350 · ZAP 112,850 · C2/S2 111,350 ·
+  //        z2 111,250 · aiguille F 110,500 · fin z4 110,000 · Alfa 100,000
+  //   Quais (400 m) : PK 110,050 à 110,450, le long de z1 (V1) et de z4 (V2).
+  // signalZone : distance entre le signal et le début de la zone suivante.
+  // quaiFin : distance entre le signal et l'extrémité du quai, dans le sens de marche.
+  // La longueur de la ligne après Bravo en V2 se déduit de la V1, pour retomber sur Alfa.
+  const LIGNE = {
+    pkAlfa: 100000,
+    V1: { ligneAvant: 3000, annonce: 5500, approche: 1500, signalZone: 100, zoneA: 800, zoneB: 450, ligneApres: 9650, quaiFin: 450, quaiLongueur: 400 },
+    V2: { ligneAvant: 2650, annonce: 5500, approche: 1500, signalZone: 100, zoneA: 750, zoneB: 500, quaiFin: 1300, quaiLongueur: 400 },
   };
+  const SECTIONS = ['ligneAvant', 'annonce', 'approche', 'signalZone', 'zoneA', 'zoneB', 'ligneApres'];
+
+  // Positions (en mètres depuis la gare d'origine de la voie) et PK des repères
+  function geometrie(etat, voie) {
+    const l = etat.ligne[voie];
+    const v1 = etat.ligne.V1;
+    const total = SECTIONS.reduce((s, n) => s + v1[n], 0);
+    const g = {};
+    g.debutAnnonce = l.ligneAvant;
+    g.debutZap = g.debutAnnonce + l.annonce;
+    g.signal = g.debutZap + l.approche;
+    g.debutZoneA = g.signal + l.signalZone;
+    g.aiguille = g.debutZoneA + l.zoneA;
+    g.finZoneB = g.aiguille + l.zoneB;
+    g.ligneApres = voie === 'V1' ? l.ligneApres : Math.max(500, total - g.finZoneB);
+    g.fin = g.finZoneB + g.ligneApres;
+    g.quaiFin = g.signal + l.quaiFin;
+    g.quaiDebut = g.quaiFin - l.quaiLongueur;
+    g.pk = (x) => (voie === 'V1' ? etat.ligne.pkAlfa + x : etat.ligne.pkAlfa + total - x);
+    return g;
+  }
+
+  // PK en mètres → « 110,250 »
+  function formatPK(m) {
+    const r = Math.round(m);
+    return `${Math.floor(r / 1000)},${String(r % 1000).padStart(3, '0')}`;
+  }
+
+  // ---------- Trains ----------
+  // Caractéristiques par longueur : vitesse maximale par défaut (km/h),
+  // accélération et freinage de service (m/s²)
+  const TYPES = {
+    50: { libelle: '50 m (engin seul)', vmax: 120, acceleration: 0.6, freinage: 0.8 },
+    300: { libelle: '300 m (voyageurs)', vmax: 160, acceleration: 0.5, freinage: 0.7 },
+    750: { libelle: '750 m (fret)', vmax: 100, acceleration: 0.15, freinage: 0.45 },
+  };
+  const FREIN_URGENCE = 1.2;   // m/s²
+  const MARGE_ARRET = 20;      // un train s'arrête la tête à 20 m du signal fermé
+  const PAS = 0.25;            // pas de calcul, en secondes de temps simulé
+  const ACCELERATIONS = [1, 2, 5, 10, 20];
+
   // Voie empruntée selon l'origine et la destination
   function voieDe(origine, destination) {
     if (origine === destination) return null;
@@ -48,7 +88,12 @@
     if (destination === 'Bravo') return origine === 'Alfa' ? 'V1' : origine === 'Charlie' ? 'V2' : null;
     return null;
   }
-  const VITESSES = { lente: 0.5, normale: 1, rapide: 2 };
+
+  // Point d'arrêt à quai à Bravo : tête en bout de quai, plus loin si la queue
+  // n'a pas dégagé le signal, sans jamais sortir de la gare
+  function arretQuai(g, t) {
+    return Math.min(Math.max(g.quaiFin, g.signal + t.longueur + MARGE_ARRET), g.finZoneB - 10);
+  }
 
   function voieInitiale() {
     return {
@@ -80,12 +125,16 @@
   function etatInitial() {
     return {
       voies: { V1: voieInitiale(), V2: voieInitiale() },
-      // { id, numero, origine, destination, voie, vitesse, etape, reste, arrete, attente, franchir, terminus }
+      // { id, numero, origine, destination, voie, longueur, vmax, a, b, s, v,
+      //   arrete, urgence, demarrage, franchir, terminus, attenteDepart }
       trains: [],
-      durees: { ...DUREES },
+      ligne: JSON.parse(JSON.stringify(LIGNE)),
+      acceleration: 1,    // vitesse du simulateur : 1 = temps réel
+      redemarrage: 4,     // secondes entre l'ouverture du signal et la remise en marche d'un train arrêté
       prochainTrain: 1,
       auE: 'A',
       vcm: { 1: 'F', 2: 'F' },
+      gare: 'ES',         // commutateur gare : ES en service, HS hors service (fonctionnement à venir)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
         aideReddition: true,         // si Reddition est pressée seule, le bouton Sonnerie clignote
@@ -218,7 +267,7 @@
     }
     // Postes automatiques : départ des trains après annonce, voie libre rendue à l'arrivée
     const DELAI_REDDITION_AUTO = 3000;
-    function posteAutomatiques(dt, evenements) {
+    function posteAutomatiques(dtMs, evenements) {
       const auto = etat.reglages.postesAutomatiques;
       etat.trains.forEach((t) => {
         if (!t.attenteDepart) return;
@@ -235,7 +284,7 @@
         v.sonnerieAval = false;
         if (!(v.arrivesAval > 0 && v.annonceEmise)) { v.delaiReddition = null; return; }
         if (v.delaiReddition == null) v.delaiReddition = DELAI_REDDITION_AUTO;
-        v.delaiReddition -= dt;
+        v.delaiReddition -= dtMs;
         if (v.delaiReddition <= 0 && rendreAval(v)) evenements.push(`${POSTES[voie].aval} rend voie libre à Bravo (${voie})`);
       });
     }
@@ -250,77 +299,132 @@
 
     const trouver = (id) => etat.trains.find((t) => t.id === id);
 
-    // Fait avancer un train de dt millisecondes ; renvoie les événements survenus
-    function avancer(t, dt, evenements) {
+    // ---------- Marche d'un train ----------
+    // Le conducteur voit le signal à partir de l'avertissement (début de la ZAP) :
+    // s'il est fermé, il freine pour s'arrêter devant. S'il se ferme trop tard,
+    // le train ne peut plus s'arrêter et le franchit.
+    function avancer(t, duree, evenements) {
+      const g = geometrie(etat, t.voie);
+      let reste = duree;
+      while (reste > 1e-9 && !t.terminus && !t.attenteDepart) {
+        const h = Math.min(PAS, reste);
+        reste -= h;
+        if (pas(t, g, h, evenements) === 'sorti') return;
+      }
+    }
+
+    function pas(t, g, h, evenements) {
       const v = etat.voies[t.voie];
-      const facteur = VITESSES[t.vitesse] || 1;
-      // Le signal est franchissable si le sémaphore et le carré sont ouverts, ou sur autorisation
       const franchissable = () => t.franchir || (v.sema.ouvert && !v.carre.ferme);
-      dt *= facteur;
-      while (dt > 0 && !t.terminus && !t.attenteDepart) {
-        if (t.attente) {
-          if (!franchissable()) { t.demarrage = null; return; }
+
+      // Point d'arrêt visé : signal fermé en vue, ou quai en terminus
+      let cible = null;
+      if (t.s < g.signal && t.s >= g.debutZap && !franchissable()) cible = g.signal - MARGE_ARRET;
+      if (t.destination === 'Bravo') {
+        const q = arretQuai(g, t);
+        cible = cible == null ? q : Math.min(cible, q);
+      }
+
+      const v0 = t.v;
+      let s1;
+      if (t.arrete) {
+        // Arrêt ordonné par le formateur (ou d'urgence après un franchissement)
+        if (t.v === 0) return null;
+        t.v = Math.max(0, t.v - (t.urgence ? FREIN_URGENCE : t.b) * h);
+        s1 = t.s + ((v0 + t.v) / 2) * h;
+      } else {
+        if (t.v === 0) {
+          if (cible != null && cible - t.s <= 0.5) {
+            t.demarrage = null;
+            if (t.destination === 'Bravo' && Math.abs(cible - arretQuai(g, t)) < 0.5) {
+              t.terminus = true;
+              evenements.push(`Train ${t.numero} terminus Bravo, à quai (${t.voie})`);
+            }
+            return null;
+          }
           // Inertie : le train met quelques secondes à se remettre en marche
           if (t.demarrage == null) {
-            t.demarrage = etat.durees.redemarrage;
+            t.demarrage = etat.redemarrage;
             evenements.push(`Train ${t.numero} se remet en marche (${t.voie})`);
           }
-          const reel = dt / facteur;
-          if (t.demarrage > reel) { t.demarrage -= reel; return; }
-          dt -= t.demarrage * facteur;
+          t.demarrage -= h;
+          if (t.demarrage > 0) return null;
           t.demarrage = null;
-          t.attente = false;
         }
-        if (t.reste > dt) { t.reste -= dt; return; }
-        dt -= t.reste;
-        t.reste = 0;
-        if (PARCOURS[t.etape].signal && !franchissable()) {
-          evenements.push(`Train ${t.numero} arrêté devant le signal fermé (${t.voie})`);
-          t.attente = true;
-          t.demarrage = null;
-          return;
+        let dec = 0;
+        if (cible != null) {
+          const dist = cible - t.s;
+          if (dist <= 0) dec = FREIN_URGENCE;
+          else {
+            const requis = (t.v * t.v) / (2 * dist);
+            if (requis >= 0.95 * t.b) dec = Math.min(requis, FREIN_URGENCE);
+          }
         }
-        t.etape += 1;
-        if (t.etape >= PARCOURS.length) {
-          etat.trains.splice(etat.trains.indexOf(t), 1);
-          v.arrivesAval += 1;
-          evenements.push(`Train ${t.numero} arrivé à ${t.destination} (${t.voie})`);
-          return;
-        }
-        t.reste = etat.durees[PARCOURS[t.etape].nom];
-        if (PARCOURS[t.etape].nom === 'zone-a' && t.destination === 'Bravo') {
-          t.terminus = true;
-          evenements.push(`Train ${t.numero} terminus Bravo, à quai (${t.voie})`);
-        }
-        if (PARCOURS[t.etape].nom === 'pedale') {
-          t.franchir = false;
-          pedale(v);
-          evenements.push(`Train ${t.numero} franchit le signal (${t.voie})`);
+        t.v = dec > 0 ? Math.max(0, t.v - dec * h) : Math.min(t.vmax, t.v + t.a * h);
+        s1 = t.s + ((v0 + t.v) / 2) * h;
+        // Arrêt précis au point visé, quand il est atteignable
+        if (cible != null && dec > 0 && dec < FREIN_URGENCE && (s1 >= cible || (t.v === 0 && cible - s1 < 5))) {
+          s1 = cible;
+          t.v = 0;
         }
       }
+
+      // Franchissement du signal par la tête
+      if (t.s < g.signal && s1 >= g.signal) {
+        const autorise = franchissable();
+        pedale(v);
+        if (!autorise) {
+          evenements.push(`Train ${t.numero} a franchi le signal fermé sans autorisation : arrêt d'urgence (${t.voie})`);
+          t.arrete = true;
+          t.urgence = true;
+        } else {
+          evenements.push(`Train ${t.numero} franchit le signal (${t.voie})`);
+        }
+        t.franchir = false;
+      }
+      t.s = s1;
+
+      // Arrivée complète au poste suivant (queue sortie de la ligne)
+      if (t.s - t.longueur >= g.fin) {
+        etat.trains.splice(etat.trains.indexOf(t), 1);
+        v.arrivesAval += 1;
+        evenements.push(`Train ${t.numero} arrivé à ${t.destination} (${t.voie})`);
+        return 'sorti';
+      }
+      return null;
     }
 
     const actionsGenerales = {
       // ---------- Trains (pilotés par le formateur) ----------
-      // { origine, destination } parmi Alfa, Bravo, Charlie (ou { voie } pour un parcours complet)
+      // { origine, destination } parmi Alfa, Bravo, Charlie (ou { voie } pour un parcours complet),
+      // longueur (50, 300 ou 750 m), vitesse maximale en km/h
       TRAIN_CREER(a) {
         const origine = a.origine || (POSTES[a.voie] || {}).amont;
         const destination = a.destination || (POSTES[a.voie] || {}).aval;
         const voie = voieDe(origine, destination);
         if (!voie) return sansEffet(`Parcours impossible : ${origine} → ${destination}`);
+        const type = TYPES[a.longueur] || TYPES[300];
+        const longueur = TYPES[a.longueur] ? Number(a.longueur) : 300;
+        const kmh = Number(a.vitesse) > 0 ? Number(a.vitesse) : type.vmax;
         const numero = String(a.numero || '').trim() || String(etat.prochainTrain);
-        // Un train au départ de Bravo attend à quai l'ordre de départ du formateur
         const departBravo = origine === 'Bravo';
-        const etape = departBravo ? ETAPE['zone-a'] : 0;
-        etat.trains.push({
-          id: etat.prochainTrain++, numero, origine, destination, voie,
-          vitesse: VITESSES[a.vitesse] ? a.vitesse : 'normale',
-          etape, reste: etat.durees[PARCOURS[etape].nom],
-          arrete: departBravo, attente: false, demarrage: null, franchir: false, terminus: false,
+        const t = {
+          id: etat.prochainTrain++, numero, origine, destination, voie, longueur,
+          vmax: kmh / 3.6, a: type.acceleration, b: type.freinage,
+          s: 0, v: kmh / 3.6,
+          arrete: false, urgence: false, demarrage: null, franchir: false, terminus: false,
+          aQuai: departBravo, // au départ de Bravo, à quai jusqu'à l'ordre de départ
           // Postes automatiques : le train attend à son origine que le poste ait voie libre pour l'annoncer
           attenteDepart: !departBravo && etat.reglages.postesAutomatiques,
-        });
-        if (!departBravo && etat.reglages.postesAutomatiques) {
+        };
+        // Un train au départ de Bravo attend à quai l'ordre de départ du formateur
+        if (departBravo) {
+          t.s = arretQuai(geometrie(etat, voie), t);
+          t.v = 0;
+          t.arrete = true;
+        }
+        etat.trains.push(t);
+        if (t.attenteDepart) {
           const evenements = [];
           posteAutomatiques(0, evenements);
           return ok(evenements[0] || `Train ${numero} en attente à ${origine} : voie libre non reçue de Bravo (${voie})`);
@@ -329,23 +433,19 @@
           ? `Train ${numero} à quai à Bravo, prêt au départ vers ${destination} (${voie})`
           : `Train ${numero} parti de ${origine} pour ${destination} (${voie})`);
       },
-      DUREE(a) {
-        const ms = Math.round(Number(a.secondes) * 1000);
-        if (!(a.nom in etat.durees) || !(ms >= 0)) return sansEffet(`Durée invalide : ${a.nom}`);
-        etat.durees[a.nom] = ms;
-        return ok(`Durée « ${a.nom} » : ${ms / 1000} s`);
-      },
       TRAIN_ARRETER(a) {
         const t = trouver(a.id);
         if (!t) return sansEffet('Train introuvable');
         t.arrete = true;
-        return ok(`Train ${t.numero} arrêté par le formateur`);
+        return ok(`Train ${t.numero} : arrêt demandé par le formateur`);
       },
       TRAIN_REPARTIR(a) {
         const t = trouver(a.id);
         if (!t) return sansEffet('Train introuvable');
         t.arrete = false;
-        return ok(`Train ${t.numero} remis en marche`);
+        t.urgence = false;
+        t.aQuai = false;
+        return ok(`Train ${t.numero} : ordre de repartir`);
       },
       // Autorise le train à franchir le signal fermé (tient lieu de bulletin pour l'instant)
       TRAIN_FRANCHIR(a) {
@@ -356,9 +456,9 @@
       },
       TRAIN_VITESSE(a) {
         const t = trouver(a.id);
-        if (!t || !VITESSES[a.vitesse]) return sansEffet('Train ou vitesse inconnus');
-        t.vitesse = a.vitesse;
-        return ok(`Train ${t.numero} : vitesse ${a.vitesse}`);
+        if (!t || !(Number(a.vitesse) > 0)) return sansEffet('Train ou vitesse invalides');
+        t.vmax = Number(a.vitesse) / 3.6;
+        return ok(`Train ${t.numero} : vitesse maximale ${a.vitesse} km/h`);
       },
       TRAIN_SUPPRIMER(a) {
         const t = trouver(a.id);
@@ -366,12 +466,34 @@
         etat.trains.splice(etat.trains.indexOf(t), 1);
         return ok(`Train ${t.numero} supprimé`);
       },
-      // Écoulement du temps : appelé régulièrement par la page
+      // Écoulement du temps : appelé régulièrement par la page (dt en ms réelles)
       TEMPS(a) {
+        const duree = (a.dt / 1000) * etat.acceleration;
         const evenements = [];
-        posteAutomatiques(a.dt, evenements);
-        etat.trains.slice().forEach((t) => { if (!t.arrete) avancer(t, a.dt, evenements); });
+        posteAutomatiques(duree * 1000, evenements);
+        etat.trains.slice().forEach((t) => avancer(t, duree, evenements));
         return { ok: true, message: evenements.join(' · ') || null };
+      },
+
+      // ---------- Réglages de la séance ----------
+      ACCELERATION(a) {
+        const f = Number(a.facteur);
+        if (!ACCELERATIONS.includes(f)) return sansEffet(`Vitesse du simulateur invalide : ${a.facteur}`);
+        etat.acceleration = f;
+        return ok(f === 1 ? 'Simulateur en temps réel' : `Simulateur accéléré ×${f}`);
+      },
+      LIGNE(a) {
+        const l = etat.ligne[a.voie];
+        const m = Math.round(Number(a.metres));
+        if (!l || !(a.nom in l) || !(m >= 0)) return sansEffet(`Longueur invalide : ${a.nom}`);
+        l[a.nom] = m;
+        return ok(`${a.voie} : ${a.nom} = ${m} m`);
+      },
+      REDEMARRAGE(a) {
+        const s = Number(a.secondes);
+        if (!(s >= 0)) return sansEffet('Temps de redémarrage invalide');
+        etat.redemarrage = s;
+        return ok(`Redémarrage devant un signal : ${s} s`);
       },
 
       B_AU_E(a) {
@@ -381,6 +503,13 @@
       B_VCM(a) {
         etat.vcm[a.numero] = a.position || (etat.vcm[a.numero] === 'F' ? 'O' : 'F');
         return ok(`Vcm ${a.numero} sur ${etat.vcm[a.numero]}`);
+      },
+      // Commutateur de gare : position seulement, le fonctionnement reste à définir
+      B_GARE(a) {
+        etat.gare = a.position || (etat.gare === 'ES' ? 'HS' : 'ES');
+        return ok(etat.gare === 'HS'
+          ? 'Gare hors service (HS) : fonctionnement à venir'
+          : 'Gare en service (ES) : fonctionnement à venir');
       },
       ENCLENCHEMENT(a) {
         if (!(a.nom in etat.enclenchements)) return sansEffet(`Enclenchement inconnu : ${a.nom}`);
@@ -421,20 +550,52 @@
 
   // Ce que les trains occupent sur une voie, pour l'affichage
   function occupation(etat, voie) {
+    const g = geometrie(etat, voie);
     const o = { annonce: false, approche: false, eap: false, zoneA: false, zoneB: false, saatAnnonce: '', saatCarre: '' };
-    etat.trains.filter((t) => t.voie === voie).forEach((t) => {
-      const nom = PARCOURS[t.etape].nom;
-      if (nom === 'annonce') { o.annonce = true; o.saatAnnonce = t.numero; }
-      if (nom === 'approche') o.approche = true;
-      if (nom === 'zone-a') o.zoneA = true;
-      if (nom === 'zone-b') o.zoneB = true;
+    etat.trains.filter((t) => t.voie === voie && !t.attenteDepart).forEach((t) => {
+      const tete = t.s;
+      const queue = t.s - t.longueur;
+      const recouvre = (debut, fin) => tete > debut && queue < fin;
+      // Le voyant d'annonce suit la tête : il s'éteint quand elle entre en ZAP
+      if (tete >= g.debutAnnonce && tete < g.debutZap) { o.annonce = true; o.saatAnnonce = t.numero; }
+      if (recouvre(g.debutZap, g.debutZoneA)) o.approche = true;
+      if (recouvre(g.debutZoneA, g.aiguille)) o.zoneA = true;
+      if (recouvre(g.aiguille, g.finZoneB)) o.zoneB = true;
       // Le numéro reste sur la case du carré de l'entrée en ZAP jusqu'à la libération de la dernière zone
-      if (['approche', 'pedale', 'zone-a', 'zone-b'].includes(nom)) o.saatCarre = t.numero;
+      if (tete >= g.debutZap && queue < g.finZoneB) o.saatCarre = t.numero;
     });
     // Enclenchement d'approche : ZAP occupée et carré ouvert
     o.eap = o.approche && !etat.voies[voie].carre.ferme;
     return o;
   }
 
-  return { creer, etatInitial, occupation, voieDe, POSTES, PARCOURS, DUREES, VITESSES };
+  // Où se trouve un train : section de la tête, PK de la tête et de la queue
+  function position(etat, t) {
+    const g = geometrie(etat, t.voie);
+    const p = POSTES[t.voie];
+    const za = t.voie === 'V1' ? 'z1' : 'z2';
+    const zb = t.voie === 'V1' ? 'z3' : 'z4';
+    const x = t.s;
+    let libelle;
+    if (x < g.debutAnnonce) libelle = `en ligne, de ${p.amont} vers Bravo`;
+    else if (x < g.debutZap) libelle = "en zone d'annonce";
+    else if (x < g.signal) libelle = "en zone d'approche";
+    else if (x < g.debutZoneA) libelle = 'vient de franchir le signal';
+    else if (x < g.aiguille) libelle = `sur ${za}`;
+    else if (x < g.finZoneB) libelle = `sur ${zb}`;
+    else libelle = `en ligne, de Bravo vers ${p.aval}`;
+    return {
+      libelle,
+      devantSignal: t.v === 0 && !t.arrete && x >= g.debutZap && x < g.signal,
+      redemarre: t.demarrage != null,
+      pkTete: formatPK(g.pk(x)),
+      pkQueue: formatPK(g.pk(x - t.longueur)),
+      kmh: Math.round(t.v * 3.6),
+    };
+  }
+
+  return {
+    creer, etatInitial, occupation, position, geometrie, formatPK, voieDe,
+    POSTES, TYPES, ACCELERATIONS, LIGNE, SECTIONS,
+  };
 });
