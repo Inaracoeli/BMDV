@@ -15,11 +15,22 @@
   // Toute action passe par ici : si le TCO ne répond pas, le formateur en est averti
   const agir = (action) => {
     if (!moteur.estConnecte()) {
-      $('journal').textContent = 'TCO non connecté : action non transmise.';
+      $('journal').textContent = 'TCO non connecté : action non transmise. Saisissez le code de séance sur le PC du TCO.';
       $('journal').className = 'sans-effet';
     }
     moteur.agir(action);
   };
+
+  // ---------- Séance : le code créé par ce téléphone, à saisir sur le PC du TCO ----------
+  $('code-seance').textContent = moteur.code;
+  $('code-court').textContent = moteur.code;
+  // Nouvelle séance en deux appuis, pour éviter une fausse manœuvre
+  let confirmationSeance = null;
+  $('nouvelle-seance').addEventListener('click', () => {
+    if (confirmationSeance) { moteur.nouvelleSeance(); return; }
+    $('nouvelle-seance').textContent = 'Confirmer (nouveau code à saisir sur le PC)';
+    confirmationSeance = setTimeout(() => { confirmationSeance = null; $('nouvelle-seance').textContent = 'Nouvelle séance'; }, 4000);
+  });
 
   // ---------- Onglets ----------
   let schemaCentre = false;
@@ -276,5 +287,8 @@
     const ok = moteur.estConnecte();
     $('liaison').textContent = ok ? 'TCO connecté' : 'TCO non connecté';
     $('liaison').className = ok ? 'en-ligne' : 'hors-ligne';
+    // Une fois relié, le grand code se replie ; il réapparaît si la liaison est perdue
+    $('seance').classList.toggle('relie', ok);
+    if (ok && $('journal').textContent === 'En attente du TCO.') $('journal').textContent = 'Relié au TCO.';
   }, 500);
 })();

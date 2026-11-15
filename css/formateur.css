@@ -40,6 +40,19 @@ header {
 #journal { padding: 8px 14px; font-size: 14px; min-height: 36px; background: #1d2023; color: #8fd18f; border-bottom: 1px solid var(--trait); }
 #journal.sans-effet { color: #ffb347; }
 
+/* ---------- Code de séance ---------- */
+#seance { padding: 10px 14px; background: #1d2023; border-bottom: 1px solid var(--trait); }
+#seance .consigne { font-size: 13px; color: var(--discret); }
+#seance .code-grand { font: 700 30px "Courier New", monospace; letter-spacing: 3px; color: var(--texte); margin: 4px 0 8px; user-select: all; }
+#seance .resume { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--discret); }
+#seance .resume b { color: var(--texte); font-family: "Courier New", monospace; letter-spacing: 1px; }
+#seance button {
+  font: inherit; font-size: 13px; color: var(--texte); background: #33383e; border: 1px solid #4a5058;
+  border-radius: 6px; padding: 0 10px; min-height: 34px; cursor: pointer;
+}
+#seance.relie { padding: 6px 14px; }
+#seance.relie .consigne, #seance.relie .code-grand { display: none; }
+
 /* ---------- Onglets ---------- */
 main { flex: 1; overflow-y: auto; padding: 12px; max-width: 640px; width: 100%; margin: 0 auto; }
 main section { display: none; }
