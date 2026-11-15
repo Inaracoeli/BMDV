@@ -17,7 +17,8 @@ la base de données, accessible uniquement après authentification.
 | `js/moteur.js` | Moteur : block, trains (position en mètres, longueur, vitesse, freinage), enclenchements. Sans dépendance au navigateur. |
 | `js/tco.js` | Liaison moteur ↔ TCO (affichage de l'état, clics de l'élève) |
 | `js/poste.js` | Démarrage de la page du TCO : moteur, horloge, liaison |
-| `js/liaison.js` | Échange d'état et d'actions entre le TCO et l'écran formateur |
+| `js/liaison.js` | Échange d'état et d'actions entre le TCO et l'écran formateur (même navigateur ou à distance, code de séance) |
+| `js/config.js` | Adresse et clé publique Supabase pour la liaison distante |
 | `js/formateur.js` | Écran formateur |
 | `js/schema.js` | Schéma simplifié de la ligne avec les PK (fenêtre LIGNE du TCO, onglet Trains du formateur) |
 | `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
@@ -26,9 +27,12 @@ la base de données, accessible uniquement après authentification.
 
 ## Utilisation
 
-Ouvrir `tco.html` et `formateur.html` dans deux onglets du même navigateur, servis par un serveur web
-(par exemple `python3 -m http.server`, puis `http://localhost:8000/tco.html`). La liaison entre appareils
-différents viendra à l'étape 5.
+1. Ouvrir `tco.html` sur le PC de l'élève. Un code de séance s'affiche en bas à droite (par exemple `K7Q2-M9XD-3FPA`).
+2. Ouvrir `formateur.html` sur le téléphone, saisir ce code et appuyer sur **Relier**.
+
+La liaison passe par la messagerie temps réel de Supabase (diffusion sur un canal propre à la séance, sans table ni
+compte ; configuration dans `js/config.js`, bibliothèque chargée depuis jsDelivr). Sans réseau, le TCO et l'écran
+formateur se relient encore s'ils sont ouverts dans deux onglets du même navigateur.
 
 ## Nomenclature des éléments
 
@@ -55,7 +59,7 @@ Les composants répétés (bouton, voyant, zone, case, TPL) sont dessinés une s
 - [x] Étape 2 — Moteur de block (sans réseau)
 - [x] Étape 3 — Circulation des trains
 - [x] Étape 4 — Écran formateur (même navigateur)
-- [ ] Étape 5 — Synchronisation temps réel et authentification
+- [x] Étape 5 — Liaison temps réel entre appareils (code de séance)
 - [ ] Étape 6 — Scénarios et dérangements
 
 ## Ligne

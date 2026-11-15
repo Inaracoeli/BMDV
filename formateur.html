@@ -18,7 +18,14 @@
   <div class="titre">BMDV <span>Formateur</span></div>
   <div id="liaison" class="hors-ligne">TCO non connecté</div>
 </header>
-<div id="journal">Ouvrez le TCO dans un autre onglet de ce navigateur.</div>
+<div id="seance">
+  <label for="code-seance">Code de séance affiché en bas à droite du TCO</label>
+  <div class="ligne-seance">
+    <input id="code-seance" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button id="relier" type="button">Relier</button>
+  </div>
+</div>
+<div id="journal">Saisissez le code de séance du TCO.</div>
 
 <main>
   <section id="onglet-postes" class="actif">
@@ -77,6 +84,8 @@
   <button data-onglet="derangements">Dérangements</button>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
 <script src="js/moteur.js"></script>
 <script src="js/liaison.js"></script>
 <script src="js/schema.js"></script>
