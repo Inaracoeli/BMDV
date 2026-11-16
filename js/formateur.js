@@ -74,13 +74,16 @@
     const colonnes = creer('div', 'colonnes');
 
     const colE = creer('div', 'colonne');
-    colE.append(creer('div', 'voie', `VOIE ${emission[1]}`), creer('div', 'sens', `${poste} → Bravo`));
+    const autre = poste === 'Alfa' ? 'Charlie' : 'Alfa';
+    const sensE = creer('div', 'sens', `${poste} → Bravo`);
+    colE.append(creer('div', 'voie', `VOIE ${emission[1]}`), sensE);
     const annonce = poussoir(colE, 'ANNONCE', () => agir({ type: 'AMONT_ANNONCE', voie: emission }));
     const vl = voyant(colE, 'VOIE LIBRE');
     const sonnerieE = poussoir(colE, 'SONNERIE', () => agir({ type: 'AMONT_ARRET_SONNERIE', voie: emission }));
 
     const colR = creer('div', 'colonne');
-    colR.append(creer('div', 'voie', `VOIE ${reception[1]}`), creer('div', 'sens', `Bravo → ${poste}`));
+    const sensR = creer('div', 'sens', `Bravo → ${poste}`);
+    colR.append(creer('div', 'voie', `VOIE ${reception[1]}`), sensR);
     const reddition = poussoir(colR, 'REDDITION', () => agir({ type: 'AVAL_REDDITION', voie: reception }));
     const parvenu = voyant(colR, 'TRAIN PARVENU');
     const sonnerieR = poussoir(colR, 'SONNERIE', () => agir({ type: 'AVAL_ARRET_SONNERIE', voie: reception }));
@@ -93,10 +96,18 @@
     majPupitres.push((etat) => {
       const e = etat.voies[emission];
       const r = etat.voies[reception];
-      annonce.dataset.etat = e.annonceRecue ? 'rouge' : '';
-      vl.dataset.etat = e.annonceRecue ? '' : 'blanc';
+      // Gare de Bravo hors service : le canton va directement jusqu'à l'autre poste
+      const hs = etat.gare === 'HS';
+      plaque.firstChild.textContent = `POSTE ${poste.toUpperCase()}`;
+      plaque.querySelector('small').textContent = hs ? `BLOCK DIRECT AVEC ${autre.toUpperCase()}` : 'BLOCK CÔTÉ BRAVO';
+      p.classList.toggle('direct', hs);
+      sensE.textContent = hs ? `${poste} → ${autre}` : `${poste} → Bravo`;
+      sensR.textContent = hs ? `${autre} → ${poste}` : `Bravo → ${poste}`;
+      const annonceEnCours = hs ? e.directe : e.annonceRecue;
+      annonce.dataset.etat = annonceEnCours ? 'rouge' : '';
+      vl.dataset.etat = annonceEnCours ? '' : 'blanc';
       sonnerieE.dataset.etat = e.sonnerieAmont ? 'blanc' : '';
-      reddition.dataset.etat = r.annonceEmise ? 'jaune' : '';
+      reddition.dataset.etat = (hs ? r.directe : r.annonceEmise) ? 'jaune' : '';
       parvenu.dataset.etat = r.arrivesAval > 0 ? 'jaune' : '';
       sonnerieR.dataset.etat = r.sonnerieAval ? 'blanc' : '';
     });

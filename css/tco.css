@@ -209,3 +209,79 @@ body.verrouille .tco, body.verrouille #seance, body.verrouille #toast { visibili
 #guide .schema .voie { fill: var(--voie); } #guide .schema .mat { stroke: #3a3e43; stroke-width: 2; }
 #guide .schema .feu { stroke: #25282c; stroke-width: 1.5; } #guide .schema .feu.ferme { fill: var(--rouge); } #guide .schema .feu.ouvert { fill: var(--vert); }
 #guide .schema .train { fill: #25282c; } #guide .schema .fleche { fill: none; stroke: #25282c; stroke-width: 2; }
+
+/* ---------- Registre de cantonnement ---------- */
+#registre { width: 97vw; max-width: none; height: 94vh; max-height: 94vh; padding: 0 18px 14px; display: none; flex-direction: column; overflow: hidden; }
+#registre[open] { display: flex; }
+#registre header { margin: 0 -18px 0; padding: 10px 18px; gap: 16px; flex-wrap: wrap; }
+#registre .onglets { display: flex; gap: 4px; margin-left: auto; }
+#registre .onglets button { font: 14px Arial, sans-serif; color: #d6d8db; background: #2b2f33; border: 1px solid #55595e; border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+#registre .onglets button.actif { background: #d9730d; border-color: #a85608; color: #fff; }
+#registre .outils { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 0 8px; }
+#registre .outils button { font: 13px Arial, sans-serif; background: #fff; border: 1px solid #8a8d92; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+#registre .outils button:hover { background: #f0ead2; }
+#registre .outils button.danger { color: #a01818; border-color: #c46a6a; }
+#registre .outils label { font-size: 13px; margin-right: 8px; }
+#registre .outils .commence { width: 150px; font: 13px Arial, sans-serif; padding: 3px 6px; border: 1px solid #8a8d92; border-radius: 3px; }
+#registre .outils .espace { flex: 1; }
+#registre .aide { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; color: #6b6f74; }
+#registre .corps { flex: 1; overflow: auto; }
+.double-page { display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-width: 1500px; }
+.double-page .page.impair { border-right: 3px double #6b6f74; }
+table.page { width: 100%; border-collapse: collapse; table-layout: fixed; background: #fffdf3; font: 13px Arial, sans-serif; }
+table.page caption { font-weight: bold; letter-spacing: 1px; padding: 4px 0; background: #f7f4e4; }
+table.page caption small { font-weight: normal; }
+table.page col.c-train { width: 11%; } table.page col.c-heure { width: 7.6%; } table.page col.c-obs { width: 35.8%; }
+table.page th { font-size: 10.5px; font-weight: bold; line-height: 1.15; border: 1px solid #6b6f74; padding: 3px 2px; background: #ece6cc; position: sticky; top: 0; }
+table.page thead tr:nth-child(2) th { top: 21px; font-weight: normal; }
+table.page td { border-left: 1px solid #9a9da1; border-right: 1px solid #9a9da1; border-bottom: 1px solid #cfd6e6; height: 24px; padding: 0 3px; position: relative; line-height: 1.2; }
+table.page td.heure { text-align: center; }
+table.page td input { width: 100%; border: 0; background: transparent; font: inherit; color: #12317a; padding: 0; outline: none; }
+table.page td.heure input { text-align: center; }
+table.page td input:focus { background: #fff6c8; }
+table.page tr.mention td { border-left: 0; border-right: 0; color: #12317a; font-style: italic; }
+table.page tr.mention td.gauche { text-align: right; } table.page tr.mention td.gauche input { text-align: right; }
+table.page tr.mention td { border-bottom: 1.5px solid #12317a; }
+table.page tr.mention input { font-style: italic; }
+table.page .suppr { position: absolute; right: 4px; top: 3px; border: 0; background: none; color: #a01818; cursor: pointer; font-size: 12px; }
+table.page .note-num { position: absolute; left: 1px; top: 4px; background: #d9730d; color: #fff; border-radius: 50%; width: 15px; height: 15px; font: bold 10px/15px Arial, sans-serif; text-align: center; font-style: normal; }
+table.page td:first-child { padding-left: 19px; }
+table.page tr.mention td.gauche { padding-left: 19px; }
+table.page td:not(.heure):not(.obs) { color: #12317a; }
+#registre table.page td { color: #12317a; }
+#registre .notes { columns: 2; column-gap: 36px; margin: 14px 0 0; padding-left: 22px; font-size: 13.5px; }
+#registre .notes li { margin-bottom: 5px; break-inside: avoid; }
+#registre .regles { display: grid; grid-template-columns: 200px 1fr; gap: 8px 18px; max-width: 1100px; margin: 8px 0; }
+#registre .regles dt { font-weight: bold; } #registre .regles dd { margin: 0; }
+#impression { display: none; }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body.impression { background: #fff; }
+  body.impression > *:not(#impression) { display: none !important; }
+  body.impression #impression { display: block; }
+  #impression .feuille { page-break-after: always; break-after: page; }
+  #impression .feuille:last-child { page-break-after: auto; break-after: auto; }
+  #impression .entete-impr { display: flex; justify-content: space-between; font: 11px Arial, sans-serif; margin-bottom: 4px; }
+  #impression table.page { background: #fff; font-size: 12px; }
+  #impression table.page th { position: static; background: #eee; }
+  #impression table.page td { height: 6.4mm; color: #000; }
+  #impression table.page tr.mention td { color: #000; border-bottom-color: #000; }
+  #impression .note-num { border: 1px solid #000; background: #fff; color: #000; }
+  #impression .notes { font: 12px Arial, sans-serif; columns: 2; }
+}
+
+/* ---------- Guide : onglets et gare temporaire ---------- */
+#guide header { gap: 14px; flex-wrap: wrap; }
+#guide .onglets { display: flex; gap: 4px; margin-left: auto; }
+#guide .onglets button { font: 14px Arial, sans-serif; color: #d6d8db; background: #2b2f33; border: 1px solid #55595e; border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+#guide .onglets button.actif { background: #d9730d; border-color: #a85608; color: #fff; }
+#guide .principe small { display: block; color: #6b6f74; }
+#guide h3 { font-size: 17px; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #d9730d; }
+#guide h3 small { font-weight: normal; color: #6b6f74; margin-left: 6px; }
+#guide .depeche-texte { margin: 6px 0 0; padding: 5px 9px; background: #fff; border-left: 4px solid #12317a; font-family: "Courier New", monospace; font-size: 13.5px; color: #12317a; }
+#guide .schema .poste.hs { fill: #fff; stroke: #8a8d92; stroke-dasharray: 3 2; }
+#guide .schema .etiquette { font: bold 10px Arial, sans-serif; text-anchor: middle; fill: #55595e; }
+#guide .schema .nvoie { font: 10px Arial, sans-serif; text-anchor: middle; fill: #8a8d92; }
+#guide .schema .depeche { fill: none; stroke: #12317a; stroke-width: 1.6; stroke-dasharray: 4 3; }
+#guide .schema .train.detresse { fill: var(--rouge); }
