@@ -120,8 +120,9 @@
       // Gare de Bravo hors service : le poste amont annonce directement au poste aval
       // (canton Alfa–Charlie), voie libre pas encore rendue
       directe: false,
-      // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert
-      carre: { ferme: false },
+      // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert ;
+      // fermé par son Vcm au point E, ou par le formateur (dérangement : force)
+      carre: { ferme: false, force: false },
     };
   }
 
@@ -135,8 +136,17 @@
       acceleration: 1,    // vitesse du simulateur : 1 = temps réel
       redemarrage: 4,     // secondes entre l'ouverture du signal et la remise en marche d'un train arrêté
       prochainTrain: 1,
-      auE: 'A',
-      vcm: { 1: 'F', 2: 'F' },
+      auE: 'I',               // commutateur Au E : I interdit (repos), A autorisé
+      vcm: { 1: 'O', 2: 'O' }, // Vcm du point E : O ouvert (repos), F fermé
+      pointE: {
+        eap: { V1: false, V2: false },          // enclenchements d'approche (mémorisés)
+        cles: { E: 'vcm', F: 'vcm' },           // 'vcm' (dans son Vcm) ou 'serrure' (dans la serrure de l'aiguille)
+        serrures: { E: true, F: true },         // true : verrouillée, pêne sorti
+        aiguilles: { E: 'normale', F: 'normale' }, // 'normale' ou 'renversee'
+      },
+      tableau: JSON.parse(JSON.stringify(TABLEAU_DEFAUT)),
+      // Historique de la séance pour le tableau de bord du formateur (le plus récent en dernier)
+      historique: [],
       gare: 'ES',         // commutateur gare : ES en service, HS hors service (gare temporaire, IN1508)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
@@ -153,12 +163,165 @@
     };
   }
 
+  // ==========================================================
+  // Point E et aiguilles : tableau d'enclenchement
+  // Tableau à deux entrées : chaque LIGNE (manœuvre ou état) exige, pour chaque
+  // COLONNE (condition), que la condition soit vraie (true) ou fausse (false) ;
+  // une case absente est sans effet. Le formateur modifie le tableau dans l'app.
+  // Correspondances : Vcm 1 ↔ carré C1 ↔ clé E ↔ aiguille E (voie 1, z1 / z3)
+  //                   Vcm 2 ↔ carré C2 ↔ clé F ↔ aiguille F (voie 2, z2 / z4)
+  // ==========================================================
+  const CONDITIONS = [
+    // [clé, libellé, groupe]
+    ['aueA', 'Commutateur Au E sur A', 'Poste B'],
+    ['aueDonnee', 'Au E donnée (voyant blanc)', 'Point E'],
+    ['eap1Libre', 'EAP C1 libre', 'Point E'],
+    ['eap2Libre', 'EAP C2 libre', 'Point E'],
+    ['vcm1O', 'Vcm 1 sur O', 'Point E'],
+    ['vcm2O', 'Vcm 2 sur O', 'Point E'],
+    ['zap1Libre', 'ZAP C1 libre', 'Zones'],
+    ['z1Libre', 'z1 libre', 'Zones'],
+    ['z3Libre', 'z3 libre', 'Zones'],
+    ['zap2Libre', 'ZAP C2 libre', 'Zones'],
+    ['z2Libre', 'z2 libre', 'Zones'],
+    ['z4Libre', 'z4 libre', 'Zones'],
+    ['c1Ouvert', 'Carré C1 ouvert', 'Signaux'],
+    ['c2Ouvert', 'Carré C2 ouvert', 'Signaux'],
+    ['cleEVcm', 'Clé E dans le Vcm 1', 'Clés'],
+    ['cleFVcm', 'Clé F dans le Vcm 2', 'Clés'],
+    ['serrureEVerrouillee', 'Serrure E verrouillée', 'Aiguilles'],
+    ['serrureFVerrouillee', 'Serrure F verrouillée', 'Aiguilles'],
+    ['aigENormale', 'Aiguille E normale', 'Aiguilles'],
+    ['aigFNormale', 'Aiguille F normale', 'Aiguilles'],
+  ];
+
+  // Lignes « état » : calculées en permanence, elles ne peuvent exiger que des
+  // conditions de base (pas Au E donnée ni EAP, pour éviter les boucles).
+  const LIGNES_TABLEAU = [
+    // [clé, libellé, genre]
+    ['aueDonnee', 'Au E donnée (voyant Au E blanc)', 'etat'],
+    ['eap1Enclenche', "EAP C1 s'enclenche", 'etat'],
+    ['eap1Libere', 'EAP C1 se libère', 'etat'],
+    ['eap2Enclenche', "EAP C2 s'enclenche", 'etat'],
+    ['eap2Libere', 'EAP C2 se libère', 'etat'],
+    ['vcm1F', 'Vcm 1 : O → F (fermer C1)', 'manoeuvre'],
+    ['vcm1O', 'Vcm 1 : F → O (ouvrir C1)', 'manoeuvre'],
+    ['vcm2F', 'Vcm 2 : O → F (fermer C2)', 'manoeuvre'],
+    ['vcm2O', 'Vcm 2 : F → O (ouvrir C2)', 'manoeuvre'],
+    ['cleERetirer', 'Clé E : retirer du Vcm 1', 'manoeuvre'],
+    ['cleERendre', 'Clé E : remettre dans le Vcm 1', 'manoeuvre'],
+    ['cleFRetirer', 'Clé F : retirer du Vcm 2', 'manoeuvre'],
+    ['cleFRendre', 'Clé F : remettre dans le Vcm 2', 'manoeuvre'],
+    ['serrureEOuvrir', 'Serrure E : déverrouiller (pêne rentré)', 'manoeuvre'],
+    ['serrureEFermer', 'Serrure E : verrouiller (pêne sorti)', 'manoeuvre'],
+    ['serrureFOuvrir', 'Serrure F : déverrouiller (pêne rentré)', 'manoeuvre'],
+    ['serrureFFermer', 'Serrure F : verrouiller (pêne sorti)', 'manoeuvre'],
+    ['levierE', "Levier E : manœuvrer l'aiguille E", 'manoeuvre'],
+    ['levierF', "Levier F : manœuvrer l'aiguille F", 'manoeuvre'],
+  ];
+  const COLONNES_DERIVEES = ['aueDonnee', 'eap1Libre', 'eap2Libre'];
+  const TABLEAU_DEFAUT = {
+    aueDonnee: { aueA: true, z1Libre: true, z2Libre: true },
+    eap1Enclenche: { zap1Libre: false, c1Ouvert: true },
+    eap1Libere: { zap1Libre: true, z1Libre: true },
+    eap2Enclenche: { zap2Libre: false, c2Ouvert: true },
+    eap2Libere: { zap2Libre: true, z2Libre: true },
+    vcm1F: { aueDonnee: true, eap1Libre: true },
+    vcm1O: { cleEVcm: true },
+    vcm2F: { aueDonnee: true, eap2Libre: true },
+    vcm2O: { cleFVcm: true },
+    cleERetirer: { vcm1O: false },
+    cleERendre: { serrureEVerrouillee: true },
+    cleFRetirer: { vcm2O: false },
+    cleFRendre: { serrureFVerrouillee: true },
+    serrureEOuvrir: { cleEVcm: false },
+    serrureEFermer: { aigENormale: true },
+    serrureFOuvrir: { cleFVcm: false },
+    serrureFFermer: { aigFNormale: true },
+    // Seules z1 et z2 protègent les aiguilles : un train arrêté sur z3 / z4 permet de manœuvrer
+    levierE: { serrureEVerrouillee: false, z1Libre: true },
+    levierF: { serrureFVerrouillee: false, z2Libre: true },
+  };
+  const LIBELLE_CONDITION = Object.fromEntries(CONDITIONS.map(([c, l]) => [c, l]));
+
+  // Valeur de chaque condition dans l'état courant
+  function conditions(etat) {
+    const o1 = occupation(etat, 'V1');
+    const o2 = occupation(etat, 'V2');
+    const e = etat.pointE;
+    const c = {
+      aueA: etat.auE === 'A',
+      zap1Libre: !o1.approche, z1Libre: !o1.zoneA, z3Libre: !o1.zoneB,
+      zap2Libre: !o2.approche, z2Libre: !o2.zoneA, z4Libre: !o2.zoneB,
+      eap1Libre: !e.eap.V1, eap2Libre: !e.eap.V2,
+      c1Ouvert: !etat.voies.V1.carre.ferme, c2Ouvert: !etat.voies.V2.carre.ferme,
+      vcm1O: etat.vcm[1] === 'O', vcm2O: etat.vcm[2] === 'O',
+      cleEVcm: e.cles.E === 'vcm', cleFVcm: e.cles.F === 'vcm',
+      serrureEVerrouillee: e.serrures.E, serrureFVerrouillee: e.serrures.F,
+      aigENormale: e.aiguilles.E === 'normale', aigFNormale: e.aiguilles.F === 'normale',
+    };
+    c.aueDonnee = manquantes(etat, 'aueDonnee', c).length === 0;
+    return c;
+  }
+  // Conditions exigées par une ligne du tableau et non réalisées
+  function manquantes(etat, ligne, c) {
+    const exige = (etat.tableau && etat.tableau[ligne]) || {};
+    return Object.entries(exige)
+      .filter(([col, val]) => col in c && c[col] !== val)
+      .map(([col, val]) => (val ? LIBELLE_CONDITION[col] : `non « ${LIBELLE_CONDITION[col]} »`));
+  }
+
   function creer(etatDepart) {
     let etat = etatDepart ? JSON.parse(JSON.stringify(etatDepart)) : etatInitial();
     const abonnes = [];
 
     const ok = (message) => ({ ok: true, message });
     const sansEffet = (message) => ({ ok: false, message });
+
+    // Refus motivé si une manœuvre n'a pas toutes les conditions du tableau
+    function verifier(ligne, libelle) {
+      const m = manquantes(etat, ligne, conditions(etat));
+      return m.length ? sansEffet(`${libelle} : refusé par les enclenchements (${m.join(', ')})`) : null;
+    }
+    // Carré fermé par son Vcm (F) ou par dérangement
+    function majCarres() {
+      [['V1', 1], ['V2', 2]].forEach(([voie, n]) => {
+        const c = etat.voies[voie].carre;
+        c.ferme = etat.vcm[n] === 'F' || !!c.force;
+      });
+    }
+    // Enclenchements d'approche : s'enclenchent et se libèrent selon le tableau
+    function majPointE() {
+      const e = etat.pointE;
+      [['V1', 1], ['V2', 2]].forEach(([voie, n]) => {
+        if (!etat.enclenchements.approche) { e.eap[voie] = false; return; }
+        const c = conditions(etat);
+        if (e.eap[voie] && !manquantes(etat, `eap${n}Libere`, c).length) e.eap[voie] = false;
+        else if (!e.eap[voie] && !manquantes(etat, `eap${n}Enclenche`, c).length) e.eap[voie] = true;
+      });
+    }
+    majCarres();
+
+    // Historique : manœuvres de Bravo (effectuées ou refusées, avec le motif),
+    // actions d'Alfa, de Charlie et du formateur, événements des trains
+    const HISTORIQUE_MAX = 150;
+    function acteur(type) {
+      if (/^B_/.test(type)) return 'Bravo';
+      if (/^AMONT_|^AVAL_/.test(type)) return 'Alfa / Charlie';
+      if (type === 'TEMPS') return 'Ligne';
+      return 'Formateur';
+    }
+    function noter(action, resultat) {
+      if (!action || !resultat || !resultat.message) return;
+      if (action.type === 'TEMPS' && !resultat.message) return;
+      const qui = action.type === 'AMONT_ANNONCE' || action.type === 'AMONT_ARRET_SONNERIE'
+        ? POSTES[action.voie] && POSTES[action.voie].amont
+        : /^AVAL_/.test(action.type) ? POSTES[action.voie] && POSTES[action.voie].aval : acteur(action.type);
+      const messages = action.type === 'TEMPS' ? resultat.message.split(' · ') : [resultat.message];
+      const h = Date.now();
+      messages.forEach((m) => etat.historique.push({ h, qui: qui || acteur(action.type), type: action.type, ok: !!resultat.ok, message: m }));
+      if (etat.historique.length > HISTORIQUE_MAX) etat.historique.splice(0, etat.historique.length - HISTORIQUE_MAX);
+    }
 
     const actions = {
       // ---------- Poste amont (joué par le formateur) ----------
@@ -215,14 +378,10 @@
         return ok(`Bravo ouvre le sémaphore (${a.voie})`);
       },
 
-      // Fermeture / ouverture du carré (sera commandée par les Vcm du point E)
+      // Dérangement : carré fermé par le formateur, indépendamment du Vcm
       B_CARRE(v, a) {
-        const fermer = a.ferme !== undefined ? !!a.ferme : !v.carre.ferme;
-        if (fermer && !v.carre.ferme && etat.enclenchements.approche && occupation(etat, a.voie).eap) {
-          return sansEffet(`Carré ${a.voie} : fermeture impossible, enclenchement d'approche (ZAP occupée)`);
-        }
-        v.carre.ferme = fermer;
-        return ok(`Carré ${a.voie} ${fermer ? 'fermé' : 'ouvert'}`);
+        v.carre.force = a.ferme !== undefined ? !!a.ferme : !v.carre.force;
+        return ok(`Carré C${a.voie[1]} : ${v.carre.force ? 'fermé par dérangement' : 'dérangement levé'}`);
       },
 
       B_ANNONCE(v, a) {
@@ -501,6 +660,7 @@
         const evenements = [];
         posteAutomatiques(duree * 1000, evenements);
         etat.trains.slice().forEach((t) => avancer(t, duree, evenements));
+        majPointE();
         return { ok: true, message: evenements.join(' · ') || null };
       },
 
@@ -529,9 +689,78 @@
         etat.auE = a.position || (etat.auE === 'A' ? 'I' : 'A');
         return ok(`Bravo met le commutateur Au E sur ${etat.auE}`);
       },
+      // ---------- Point E (enclenchements du tableau) ----------
       B_VCM(a) {
-        etat.vcm[a.numero] = a.position || (etat.vcm[a.numero] === 'F' ? 'O' : 'F');
-        return ok(`Vcm ${a.numero} sur ${etat.vcm[a.numero]}`);
+        const n = Number(a.numero);
+        const vers = a.position || (etat.vcm[n] === 'F' ? 'O' : 'F');
+        if (vers === etat.vcm[n]) return ok(`Vcm ${n} déjà sur ${vers}`);
+        const refus = verifier(`vcm${n}${vers}`, `Vcm ${n} sur ${vers}`);
+        if (refus) return refus;
+        etat.vcm[n] = vers;
+        majCarres();
+        return ok(`Vcm ${n} sur ${vers} : carré C${n} ${vers === 'F' ? 'fermé' : 'ouvert'}`);
+      },
+      B_CLE(a) {
+        const cle = a.cle === 'F' ? 'F' : 'E';
+        const n = cle === 'E' ? 1 : 2;
+        const e = etat.pointE;
+        if (e.cles[cle] === 'vcm') {
+          const refus = verifier(`cle${cle}Retirer`, `Clé ${cle} : retrait du Vcm ${n}`);
+          if (refus) return refus;
+          e.cles[cle] = 'serrure';
+          return ok(`Clé ${cle} retirée du Vcm ${n} et engagée dans la serrure de l'aiguille ${cle}`);
+        }
+        const refus = verifier(`cle${cle}Rendre`, `Clé ${cle} : retour au Vcm ${n}`);
+        if (refus) return refus;
+        e.cles[cle] = 'vcm';
+        return ok(`Clé ${cle} remise dans le Vcm ${n}`);
+      },
+      B_SERRURE(a) {
+        const aig = a.aiguille === 'F' ? 'F' : 'E';
+        const e = etat.pointE;
+        const verrouiller = !e.serrures[aig];
+        const refus = verifier(`serrure${aig}${verrouiller ? 'Fermer' : 'Ouvrir'}`,
+          `Serrure ${aig} : ${verrouiller ? 'verrouillage' : 'déverrouillage'}`);
+        if (refus) return refus;
+        e.serrures[aig] = verrouiller;
+        return ok(`Serrure ${aig} ${verrouiller ? 'verrouillée : pêne sorti, aiguille immobilisée' : 'déverrouillée : pêne rentré, levier libre'}`);
+      },
+      B_LEVIER(a) {
+        const aig = a.aiguille === 'F' ? 'F' : 'E';
+        const e = etat.pointE;
+        const refus = verifier(`levier${aig}`, `Levier ${aig}`);
+        if (refus) return refus;
+        e.aiguilles[aig] = e.aiguilles[aig] === 'normale' ? 'renversee' : 'normale';
+        return ok(`Aiguille ${aig} ${e.aiguilles[aig] === 'normale' ? 'en position normale' : 'renversée'}`);
+      },
+      // ---------- Tableau d'enclenchement (formateur) ----------
+      TABLEAU_CASE(a) {
+        const ligne = LIGNES_TABLEAU.find(([l]) => l === a.ligne);
+        if (!ligne || !(a.colonne in LIBELLE_CONDITION)) return sansEffet('Case du tableau inconnue');
+        if (ligne[2] === 'etat' && COLONNES_DERIVEES.includes(a.colonne)) {
+          return sansEffet('Une ligne « état » ne peut dépendre que de conditions de base');
+        }
+        const t = etat.tableau[a.ligne] || (etat.tableau[a.ligne] = {});
+        if (a.valeur === true || a.valeur === false) t[a.colonne] = a.valeur;
+        else delete t[a.colonne];
+        majPointE();
+        const v = a.valeur === true ? 'exige' : a.valeur === false ? 'interdit' : 'ne dépend plus de';
+        return ok(`Tableau : « ${ligne[1]} » ${v} « ${LIBELLE_CONDITION[a.colonne]} »`);
+      },
+      TABLEAU(a) {
+        if (a.tableau === 'defaut' || !a.tableau) etat.tableau = JSON.parse(JSON.stringify(TABLEAU_DEFAUT));
+        else {
+          const t = {};
+          LIGNES_TABLEAU.forEach(([l, , genre]) => {
+            t[l] = {};
+            Object.entries(a.tableau[l] || {}).forEach(([c, val]) => {
+              if (c in LIBELLE_CONDITION && typeof val === 'boolean' && !(genre === 'etat' && COLONNES_DERIVEES.includes(c))) t[l][c] = val;
+            });
+          });
+          etat.tableau = t;
+        }
+        majPointE();
+        return ok(a.tableau === 'defaut' ? "Tableau d'enclenchement par défaut rétabli" : "Tableau d'enclenchement chargé");
       },
       // Commutateur de gare (gare temporaire, IN1508). Les conditions de cessation et de
       // reprise sont de la responsabilité de l'agent : le commutateur ne s'y oppose pas,
@@ -607,7 +836,10 @@
         return ok(`Réglage « ${a.nom} » ${a.actif ? 'activé' : 'désactivé'}`);
       },
       REINITIALISER() {
+        const tableau = etat.tableau; // le tableau du formateur est conservé
         etat = etatInitial();
+        etat.tableau = tableau;
+        etat.historique = [];
         return ok('Simulateur réinitialisé');
       },
     };
@@ -622,6 +854,9 @@
       } else {
         resultat = sansEffet(`Action inconnue : ${action.type}`);
       }
+      majCarres();
+      majPointE();
+      noter(action, resultat);
       abonnes.forEach((f) => f(etat, resultat, action));
       return resultat;
     }
@@ -649,8 +884,8 @@
       // Le numéro reste sur la case du carré de l'entrée en ZAP jusqu'à la libération de la dernière zone
       if (tete >= g.debutZap && queue < g.finZoneB) o.saatCarre = t.numero;
     });
-    // Enclenchement d'approche : ZAP occupée et carré ouvert
-    o.eap = o.approche && !etat.voies[voie].carre.ferme;
+    // Enclenchement d'approche : mémorisé par le moteur (voir majPointE)
+    o.eap = !!(etat.pointE && etat.pointE.eap[voie]);
     return o;
   }
 
@@ -680,7 +915,8 @@
   }
 
   return {
-    creer, etatInitial, occupation, position, geometrie, formatPK, voieDe,
+    creer, etatInitial, occupation, position, geometrie, formatPK, voieDe, conditions, manquantes,
+    CONDITIONS, LIGNES_TABLEAU, COLONNES_DERIVEES, TABLEAU_DEFAUT,
     POSTES, TYPES, ACCELERATIONS, LIGNE, SECTIONS,
   };
 });

@@ -8,6 +8,7 @@
 (function () {
   const moteur = Moteur.creer();
   TCO.brancher(moteur);
+  if (typeof Tableau !== 'undefined') Tableau.brancher(moteur);
   const seance = Liaison.heberger(moteur);
   window.moteur = moteur; // pratique pour le débogage dans la console
 

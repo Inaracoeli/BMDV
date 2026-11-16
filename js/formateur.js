@@ -233,7 +233,7 @@
     blocageSemaphore: 'Blocage du sémaphore derrière un train',
     redditionSemaphoreBloque: 'Reddition : sémaphore bloqué exigé',
     redditionAnnonceAvantArrivee: "Reddition : annonce avant l'arrivée exigée",
-    approche: 'EAP : carré non refermable si la ZAP est occupée',
+    approche: "EAP : enclenchement d'approche actif (Vcm bloqué)",
   };
   const cases = {};
   Object.entries(ENCLENCHEMENTS).forEach(([nom, libelle]) => {
@@ -274,7 +274,51 @@
   });
 
   // ---------- Mise à jour à chaque état reçu ----------
+  // ---------- Tableau de bord : état réel des installations et historique ----------
+  let filtreHistorique = 'tout';
+  let dernierEtat = null;
+  document.querySelectorAll('#filtres-historique button').forEach((b) => b.addEventListener('click', () => {
+    filtreHistorique = b.dataset.filtre;
+    document.querySelectorAll('#filtres-historique button').forEach((x) => x.classList.toggle('actif', x === b));
+    if (dernierEtat) afficherBord(dernierEtat);
+  }));
+  const heure = (h) => new Date(h).toLocaleTimeString('fr-FR');
+  function afficherBord(etat) {
+    dernierEtat = etat;
+    const hist = etat.historique || [];
+    const bravo = hist.filter((x) => x.qui === 'Bravo');
+    const refus = bravo.filter((x) => !x.ok).length;
+    $('bilan-bravo').textContent = `${bravo.length - refus} effectuées · ${refus} refusées`;
+    $('nb-refus').textContent = refus ? `(${refus})` : '';
+    if (!etat.pointE) return;
+    const c = Moteur.conditions(etat);
+    const pe = etat.pointE;
+    const sema = (v) => `${v.sema.ouvert ? 'ouvert' : 'fermé'}${v.sema.bloque ? ', bloqué' : ''} · manette ${v.sema.manette === 'ouvert' ? 'haut' : 'bas'}`;
+    const carre = (v, n) => v.carre.ferme ? `fermé${v.carre.force ? ' (dérangement)' : ` (Vcm ${n})`}` : 'ouvert';
+    const lignes = [
+      ['Gare', etat.gare === 'HS' ? 'hors service (HS)' : 'en service (ES)', etat.gare === 'HS'],
+      ['Sémaphore V1', sema(etat.voies.V1)], ['Sémaphore V2', sema(etat.voies.V2)],
+      ['Carré C1', carre(etat.voies.V1, 1), etat.voies.V1.carre.ferme], ['Carré C2', carre(etat.voies.V2, 2), etat.voies.V2.carre.ferme],
+      ['Au E', `commutateur ${etat.auE} · ${c.aueDonnee ? 'donnée' : 'refusée'}`, c.aueDonnee],
+      ['EAP C1', pe.eap.V1 ? 'enclenchée' : 'libre', pe.eap.V1], ['EAP C2', pe.eap.V2 ? 'enclenchée' : 'libre', pe.eap.V2],
+      ['Vcm 1', etat.vcm[1], etat.vcm[1] === 'F'], ['Vcm 2', etat.vcm[2], etat.vcm[2] === 'F'],
+      ['Clé E', pe.cles.E === 'vcm' ? 'dans le Vcm 1' : "dans la serrure de l'aiguille", pe.cles.E !== 'vcm'],
+      ['Clé F', pe.cles.F === 'vcm' ? 'dans le Vcm 2' : "dans la serrure de l'aiguille", pe.cles.F !== 'vcm'],
+      ['Serrure E', pe.serrures.E ? 'verrouillée' : 'déverrouillée', !pe.serrures.E],
+      ['Serrure F', pe.serrures.F ? 'verrouillée' : 'déverrouillée', !pe.serrures.F],
+      ['Aiguille E (terrain)', pe.aiguilles.E === 'normale' ? 'normale' : 'RENVERSÉE', pe.aiguilles.E !== 'normale'],
+      ['Aiguille F (terrain)', pe.aiguilles.F === 'normale' ? 'normale' : 'RENVERSÉE', pe.aiguilles.F !== 'normale'],
+    ];
+    $('installations').innerHTML = lignes.map(([n, v, marque]) => `<div class="inst${marque ? ' marque' : ''}"><span>${n}</span><b>${v}</b></div>`).join('');
+    const liste = hist.filter((x) => filtreHistorique === 'tout' || (x.qui === 'Bravo' && (filtreHistorique === 'bravo' || !x.ok)));
+    $('historique').innerHTML = liste.slice(-80).reverse().map((x) => `
+      <li class="${x.ok ? '' : 'refus'}"><time>${heure(x.h)}</time><span class="qui">${x.qui}</span>
+        <span class="msg">${x.message.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span></li>`).join('')
+      || '<li class="vide">Rien pour le moment.</li>';
+  }
+
   moteur.abonner((etat, resultat) => {
+    afficherBord(etat);
     majPupitres.forEach((f) => f(etat));
     $('auto').checked = etat.reglages.postesAutomatiques;
     $('aide-reddition').checked = etat.reglages.aideReddition;
@@ -284,7 +328,7 @@
     boutonsAcceleration.forEach(([facteur, b]) => b.classList.toggle('actif', etat.acceleration === facteur));
     $('schema').innerHTML = Schema.svg(etat, { trains: true });
     Object.entries(carres).forEach(([voie, b]) => {
-      b.textContent = `${etat.voies[voie].carre.ferme ? 'Ouvrir' : 'Fermer'} le carré C${voie[1]}`;
+      b.textContent = etat.voies[voie].carre.force ? `Lever le dérangement du carré C${voie[1]}` : `Carré C${voie[1]} fermé (dérangement)`;
     });
     afficherTrains(etat);
     if (resultat && resultat.message) {

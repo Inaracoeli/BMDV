@@ -153,3 +153,18 @@ details[open] summary { margin-bottom: 10px; }
 .train .avancement { height: 6px; background: #15171a; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
 .train .avancement i { display: block; height: 100%; background: var(--orange); }
 #trains:empty::before { content: "Aucun train en circulation."; display: block; color: var(--discret); padding: 6px 2px 14px; }
+
+/* ---------- Tableau de bord ---------- */
+.bilan { font-size: 13px; font-weight: 400; color: var(--discret); margin-left: 6px; }
+#installations { display: grid; grid-template-columns: 1fr; gap: 2px; }
+.inst { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 4px; background: #15171a; font-size: 14px; }
+.inst b { font-weight: 600; text-align: right; }
+.inst.marque b { color: var(--jaune); }
+#filtres-historique { margin-bottom: 8px; }
+#historique { list-style: none; margin: 0; padding: 0; max-height: 60vh; overflow: auto; }
+#historique li { display: grid; grid-template-columns: auto auto 1fr; gap: 0 8px; padding: 6px 4px; border-bottom: 1px solid var(--trait); font-size: 13.5px; align-items: baseline; }
+#historique time { color: var(--discret); font-variant-numeric: tabular-nums; font-size: 12px; }
+#historique .qui { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; background: #2b2f33; white-space: nowrap; }
+#historique li.refus .msg { color: #ffb347; }
+#historique li.refus .qui { background: #6b3a12; }
+#historique li.vide { display: block; color: var(--discret); }

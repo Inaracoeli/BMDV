@@ -23,6 +23,7 @@ la base de données, accessible uniquement après authentification.
 | `js/schema.js` | Schéma simplifié de la ligne avec les PK (fenêtre LIGNE du TCO, onglet Trains du formateur) |
 | `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
 | `js/guide.js` | Guides ouverts par le bouton GUIDE : « Faire circuler un train » et « Gare temporaire (ES / HS) » |
+| `js/tableau.js` | Tableau d'enclenchement du point E (bouton TABLEAU D'ENCLENCH.) : consultation, modification, export |
 | `js/registre.js` | Registre de cantonnement de Bravo (bouton REGISTRE) : saisie, exemples, tenue du registre, impression |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 
