@@ -45,13 +45,15 @@ const TCO = (function () {
 
     Object.entries(CABLAGE).forEach(([voie, c]) => {
       const v = etat.voies[voie];
-      allumer(c.reddition, v.annonceRecue && 'jaune');
+      // Gare hors service : les appareils de block de Bravo sont hors circuit, voyants éteints
+      const hs = etat.gare === 'HS';
+      allumer(c.reddition, !hs && v.annonceRecue && 'jaune');
       allumer(c.sonnerieAnnonce, v.sonnerieAnnonce && 'blanc');
       // L'anneau de l'action simultanée n'apparaît que si une reddition est possible :
       // train annoncé et passé chez nous. Sinon un simple appui arrête la sonnerie.
       el(c.sonnerieAnnonce).classList.toggle('reddition-possible', v.annonceRecue && v.sema.bloque);
-      allumer(c.annonce, v.annonceEmise && 'rouge');
-      allumer(c.voieLibre, !v.annonceEmise && 'blanc');
+      allumer(c.annonce, !hs && v.annonceEmise && 'rouge');
+      allumer(c.voieLibre, !hs && !v.annonceEmise && 'blanc');
       allumer(c.sonnerieReddition, v.sonnerieReddition && 'blanc');
       // Occupation par les trains : annonce, zone d'approche, zones, SAAT
       const o = Moteur.occupation(etat, voie);
@@ -92,12 +94,12 @@ const TCO = (function () {
 
   // Message bref en haut de l'écran (fonctions à venir, commutateur de gare...)
   let minuterieToast;
-  function toast(message) {
+  function toast(message, duree = 3500) {
     const t = el('toast');
     t.textContent = message;
     t.classList.add('visible');
     clearTimeout(minuterieToast);
-    minuterieToast = setTimeout(() => t.classList.remove('visible'), 3500);
+    minuterieToast = setTimeout(() => t.classList.remove('visible'), duree);
   }
 
   // Horloge du poste : heure réelle
@@ -177,13 +179,12 @@ const TCO = (function () {
     clic('E_B_VCM2', { type: 'B_VCM', numero: 2 });
     clic('CONS_C_GARE', { type: 'B_GARE' });
     el('BTN_LIGNE').addEventListener('click', () => Schema.ouvrirFenetre(moteur.lire()));
-    el('BTN_REGISTRE').addEventListener('click', () => toast('Registre de circulation : à venir'));
     demarrerHorloge();
 
     document.addEventListener('pointerdown', Sonnerie.deverrouiller, { once: true });
     moteur.abonner((etat, resultat, action) => {
       afficher(etat);
-      if (action && action.type === 'B_GARE' && resultat) toast(resultat.message);
+      if (action && action.type === 'B_GARE' && resultat) toast(resultat.message, resultat.alerte ? 9000 : 4500);
     });
   }
 

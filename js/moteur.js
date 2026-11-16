@@ -117,6 +117,9 @@
       // et délai avant que le poste aval la rende
       arrivesAval: 0,
       delaiReddition: null,
+      // Gare de Bravo hors service : le poste amont annonce directement au poste aval
+      // (canton Alfa–Charlie), voie libre pas encore rendue
+      directe: false,
       // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert
       carre: { ferme: false },
     };
@@ -134,7 +137,7 @@
       prochainTrain: 1,
       auE: 'A',
       vcm: { 1: 'F', 2: 'F' },
-      gare: 'ES',         // commutateur gare : ES en service, HS hors service (fonctionnement à venir)
+      gare: 'ES',         // commutateur gare : ES en service, HS hors service (gare temporaire, IN1508)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
         aideReddition: true,         // si Reddition est pressée seule, le bouton Sonnerie clignote
@@ -161,8 +164,9 @@
       // ---------- Poste amont (joué par le formateur) ----------
       AMONT_ANNONCE(v, a) {
         const p = POSTES[a.voie];
-        if (!annoncerAmont(v)) return sansEffet(`${p.amont} : annonce sans effet, voie libre non reçue de Bravo`);
-        return ok(`${p.amont} annonce un train à Bravo (${a.voie})`);
+        const vers = horsService() ? p.aval : 'Bravo';
+        if (!annoncerAmont(v)) return sansEffet(`${p.amont} : annonce sans effet, voie libre non reçue de ${vers}`);
+        return ok(`${p.amont} annonce un train à ${vers} (${a.voie})`);
       },
 
       AMONT_ARRET_SONNERIE(v, a) {
@@ -177,8 +181,9 @@
       // ---------- Poste aval (joué par le formateur) ----------
       AVAL_REDDITION(v, a) {
         const p = POSTES[a.voie];
-        if (!rendreAval(v)) return sansEffet(`${p.aval} : reddition sans effet, aucun train annoncé par Bravo`);
-        return ok(`${p.aval} rend voie libre à Bravo (${a.voie})`);
+        const vers = horsService() ? p.amont : 'Bravo';
+        if (!rendreAval(v)) return sansEffet(`${p.aval} : reddition sans effet, aucun train annoncé par ${vers}`);
+        return ok(`${p.aval} rend voie libre à ${vers} (${a.voie})`);
       },
 
       // ---------- Pédale (actionnée par un train, ou seule pour un dérangement) ----------
@@ -189,6 +194,7 @@
 
       // ---------- Poste B (l'élève) ----------
       B_ARRET_SONNERIE(v, a) {
+        if (horsService()) return sansEffet(HORS_CIRCUIT);
         const cle = a.sonnerie === 'reddition' ? 'sonnerieReddition' : 'sonnerieAnnonce';
         if (!v[cle]) return ok(`Bravo appuie sur Sonnerie (${a.voie})`);
         v[cle] = false;
@@ -202,7 +208,7 @@
           s.ouvert = false;
           return ok(`Bravo met le commutateur du sémaphore sur fermé (${a.voie})`);
         }
-        if (s.bloque && etat.enclenchements.blocageSemaphore) {
+        if (s.bloque && etat.enclenchements.blocageSemaphore && !horsService()) {
           return sansEffet(`Bravo commande l'ouverture du sémaphore (${a.voie}) : il n'obéit pas, sémaphore bloqué`);
         }
         s.ouvert = true;
@@ -220,6 +226,7 @@
       },
 
       B_ANNONCE(v, a) {
+        if (horsService()) return sansEffet(HORS_CIRCUIT);
         const p = POSTES[a.voie];
         if (v.annonceEmise) return sansEffet(`Bravo : annonce sans effet, voie libre non reçue de ${p.aval}`);
         v.annonceEmise = true;
@@ -229,6 +236,7 @@
       },
 
       B_REDDITION(v, a) {
+        if (horsService()) return sansEffet(HORS_CIRCUIT);
         const p = POSTES[a.voie];
         const e = etat.enclenchements;
         if (etat.reglages.redditionAvecSonnerie && !a.sonnerieAppuyee) {
@@ -248,19 +256,36 @@
       },
     };
 
-    // Le poste amont annonce un train à Bravo (possible seulement s'il a voie libre)
+    const horsService = () => etat.gare === 'HS';
+    const HORS_CIRCUIT = 'Gare de Bravo hors service : appareils de block hors circuit';
+
+    // Le poste amont annonce un train (possible seulement s'il a voie libre) :
+    // à Bravo, ou directement au poste aval quand Bravo est hors service
     function annoncerAmont(v) {
+      if (horsService()) {
+        if (v.directe) return false;
+        v.directe = true;
+        v.sonnerieAval = true;
+        return true;
+      }
       if (v.annonceRecue) return false;
       v.annonceRecue = true;
       v.sonnerieAnnonce = true;
       return true;
     }
-    // Le poste aval rend voie libre à Bravo (possible seulement si Bravo lui a annoncé le train)
+    // Le poste aval rend voie libre (possible seulement si le train lui a été annoncé) :
+    // à Bravo, ou directement au poste amont quand Bravo est hors service
     function rendreAval(v) {
-      if (!v.annonceEmise) return false;
-      v.annonceEmise = false;
-      v.sonnerieReddition = true;
-      v.sema.bloque = false;
+      if (horsService()) {
+        if (!v.directe) return false;
+        v.directe = false;
+        v.sonnerieAmont = true;
+      } else {
+        if (!v.annonceEmise) return false;
+        v.annonceEmise = false;
+        v.sonnerieReddition = true;
+        v.sema.bloque = false;
+      }
       v.arrivesAval = Math.max(0, v.arrivesAval - 1);
       v.delaiReddition = null;
       return true;
@@ -275,22 +300,26 @@
         if (!auto) { t.attenteDepart = false; return; }
         if (annoncerAmont(v)) {
           t.attenteDepart = false;
-          evenements.push(`${t.origine} annonce le train ${t.numero} à Bravo et l'expédie (${t.voie})`);
+          evenements.push(`${t.origine} annonce le train ${t.numero} à ${horsService() ? POSTES[t.voie].aval : 'Bravo'} et l'expédie (${t.voie})`);
         }
       });
       if (!auto) return;
       Object.entries(etat.voies).forEach(([voie, v]) => {
         v.sonnerieAmont = false; // les postes automatiques arrêtent leurs sonneries
         v.sonnerieAval = false;
-        if (!(v.arrivesAval > 0 && v.annonceEmise)) { v.delaiReddition = null; return; }
+        const annonce = horsService() ? v.directe : v.annonceEmise;
+        if (!(v.arrivesAval > 0 && annonce)) { v.delaiReddition = null; return; }
         if (v.delaiReddition == null) v.delaiReddition = DELAI_REDDITION_AUTO;
         v.delaiReddition -= dtMs;
-        if (v.delaiReddition <= 0 && rendreAval(v)) evenements.push(`${POSTES[voie].aval} rend voie libre à Bravo (${voie})`);
+        if (v.delaiReddition <= 0 && rendreAval(v)) {
+          evenements.push(`${POSTES[voie].aval} rend voie libre à ${horsService() ? POSTES[voie].amont : 'Bravo'} (${voie})`);
+        }
       });
     }
 
     // Franchissement du sémaphore : fermeture automatique (aubinage), blocage, sonnerie
     function pedale(v) {
+      if (horsService()) return; // dispositifs de fermeture automatique annulés
       v.sema.ouvert = false;
       v.sema.bloque = true;
       v.sonnerieAnnonce = true;
@@ -504,12 +533,43 @@
         etat.vcm[a.numero] = a.position || (etat.vcm[a.numero] === 'F' ? 'O' : 'F');
         return ok(`Vcm ${a.numero} sur ${etat.vcm[a.numero]}`);
       },
-      // Commutateur de gare : position seulement, le fonctionnement reste à définir
+      // Commutateur de gare (gare temporaire, IN1508). Les conditions de cessation et de
+      // reprise sont de la responsabilité de l'agent : le commutateur ne s'y oppose pas,
+      // mais le message signale ce qui n'était pas réuni.
       B_GARE(a) {
-        etat.gare = a.position || (etat.gare === 'ES' ? 'HS' : 'ES');
-        return ok(etat.gare === 'HS'
-          ? 'Gare hors service (HS) : fonctionnement à venir'
-          : 'Gare en service (ES) : fonctionnement à venir');
+        const nouvelle = a.position || (etat.gare === 'ES' ? 'HS' : 'ES');
+        if (nouvelle === etat.gare) return ok(`Gare déjà ${nouvelle === 'HS' ? 'hors service' : 'en service'}`);
+        const alertes = [];
+        Object.entries(etat.voies).forEach(([voie, v]) => {
+          if (nouvelle === 'HS') {
+            if (v.annonceRecue) alertes.push(`${voie} : voie libre non rendue à ${POSTES[voie].amont}`);
+            if (v.annonceEmise) alertes.push(`${voie} : voie libre non reçue de ${POSTES[voie].aval}`);
+            if (!v.sema.ouvert) alertes.push(`${voie} : sémaphore fermé`);
+          } else if (v.directe) {
+            alertes.push(`${voie} : canton ${POSTES[voie].amont}–${POSTES[voie].aval} non libre`);
+          }
+        });
+        if (etat.trains.some((t) => !t.attenteDepart && !t.terminus)) alertes.push('trains en ligne');
+        etat.gare = nouvelle;
+        Object.values(etat.voies).forEach((v) => {
+          v.sonnerieAnnonce = false;
+          v.sonnerieReddition = false;
+          if (nouvelle === 'ES') {
+            // Reprise : le block de Bravo repart d'un état propre, cantons supposés libres
+            v.directe = false;
+            v.annonceRecue = false;
+            v.annonceEmise = false;
+            v.arriveeSansAnnonce = false;
+            v.sema.bloque = false;
+            v.sema.ouvert = v.sema.manette === 'ouvert';
+          }
+        });
+        const message = nouvelle === 'HS'
+          ? 'Commutateur sur HS : gare de Bravo hors service, Alfa et Charlie travaillent directement entre eux'
+          : 'Commutateur sur ES : gare de Bravo en service, block repris';
+        return alertes.length
+          ? { ok: true, alerte: true, message: `${message}. Attention : ${alertes.join(' ; ')}` }
+          : ok(message);
       },
       ENCLENCHEMENT(a) {
         if (!(a.nom in etat.enclenchements)) return sansEffet(`Enclenchement inconnu : ${a.nom}`);

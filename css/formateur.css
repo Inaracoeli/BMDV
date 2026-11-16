@@ -99,6 +99,7 @@ details[open] summary { margin-bottom: 10px; }
   background: #1b1e21; color: #f2f2ee; border: 2px solid #b9bcc0; border-radius: 4px;
   text-align: center; font-weight: 700; letter-spacing: 2px; padding: 8px 4px 6px;
 }
+.pupitre.direct .plaque small { color: var(--jaune, #f2c200); }
 .pupitre .plaque small { display: block; font-weight: 400; font-size: 12px; letter-spacing: 1px; color: #b9bcc0; }
 .pupitre .colonnes { display: grid; grid-template-columns: 1fr 1fr; margin-top: 10px; background: var(--ivoire); border: 1.5px solid #55595e; border-radius: 4px; }
 .pupitre .colonne { padding: 8px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; }

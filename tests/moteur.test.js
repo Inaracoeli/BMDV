@@ -336,11 +336,54 @@ essai('Alfa et Charlie automatiques par défaut à l\'ouverture et après réini
   assert.strictEqual(m.lire().reglages.postesAutomatiques, true);
 });
 
-essai('commutateur de gare ES / HS', () => {
+essai('gare hors service : Alfa et Charlie font le block directement entre eux', () => {
   const m = Moteur.creer();
-  assert.strictEqual(m.lire().gare, 'ES');
-  assert.ok(/à venir/.test(m.agir({ type: 'B_GARE' }).message));
-  assert.strictEqual(m.lire().gare, 'HS');
+  const v = () => m.lire().voies.V1;
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V2', position: 'ouvert' });
+  const r = m.agir({ type: 'B_GARE', position: 'HS' });
+  assert.ok(r.ok && !r.alerte && m.lire().gare === 'HS');
+  // Les appareils de Bravo sont hors circuit
+  assert.ok(!m.agir({ type: 'B_ANNONCE', voie: 'V1' }).ok);
+  // Alfa annonce directement à Charlie ; une seconde annonce attend la voie libre de Charlie
+  assert.ok(/à Charlie/.test(m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' }).message));
+  assert.ok(v().directe && v().sonnerieAval && !v().annonceRecue);
+  assert.ok(!m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' }).ok);
+  // Le train passe à Bravo sans fermer le sémaphore (aubinage annulé)
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '9', longueur: 50 });
+  jusqua(m, () => occ(m).zoneA);
+  assert.ok(v().sema.ouvert && !v().sema.bloque && !v().sonnerieAnnonce);
+  jusqua(m, () => m.lire().trains.length === 0);
+  // Charlie rend voie libre directement à Alfa
+  assert.ok(/à Alfa/.test(m.agir({ type: 'AVAL_REDDITION', voie: 'V1' }).message));
+  assert.ok(!v().directe && v().sonnerieAmont);
+});
+
+essai('gare hors service, postes automatiques : Alfa expédie vers Charlie, qui rend voie libre', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'ACCELERATION', facteur: 20 });
+  m.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: true });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'B_GARE', position: 'HS' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '1' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '2' });
+  assert.ok(m.lire().voies.V1.directe && m.lire().trains[1].attenteDepart);
+  jusqua(m, () => !m.lire().trains.some((t) => t.numero === '1'));
+  jusqua(m, () => !m.lire().trains[0].attenteDepart); // voie libre rendue : le train 2 part
+  assert.ok(m.lire().voies.V1.directe);
+});
+
+essai('gare : cessation signalée si les conditions ne sont pas réunies, reprise sur état propre', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
+  const r = m.agir({ type: 'B_GARE', position: 'HS' });
+  assert.ok(r.alerte && /voie libre non rendue à Alfa/.test(r.message) && /sémaphore fermé/.test(r.message));
+  m.agir({ type: 'AMONT_ANNONCE', voie: 'V2' }); // Charlie annonce directement à Alfa
+  const r2 = m.agir({ type: 'B_GARE', position: 'ES' });
+  assert.ok(r2.alerte && /V2 : canton Charlie–Alfa non libre/.test(r2.message));
+  const v1 = m.lire().voies.V1;
+  assert.ok(!v1.annonceRecue && !m.lire().voies.V2.directe && m.lire().gare === 'ES');
+  assert.ok(m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' }).ok);
 });
 
 essai('réinitialisation', () => {
