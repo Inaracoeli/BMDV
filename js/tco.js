@@ -216,12 +216,17 @@ const TCO = (function () {
       const hist = etat.historique || [];
       if (vuJusqua == null) { vuJusqua = hist.length ? hist[hist.length - 1].h : 0; return; }
       hist.filter((x) => x.qui === 'Conducteur' && x.h > vuJusqua).forEach((x) => {
-        const m = /train (\S+) : arrêté devant le (.+)$/.exec(x.message);
+        const m = /^Conducteur du train (\S+) : (.+)$/.exec(x.message);
         if (!m) return;
+        const signal = /^arrêté devant le (.+)$/.exec(m[2]);
         setTimeout(() => {
           const t = moteur.lire().trains.find((tr) => tr.numero === m[1]);
-          if (!t || !Moteur.position(moteur.lire(), t).devantSignal) return;
-          appel.querySelector('p').innerHTML = `Train n° <b>${m[1]}</b> arrêté devant le <b>${m[2]}</b>, à toi.`;
+          if (!t) return;
+          // Arrêt devant un signal : seulement si le train n'est pas reparti entre-temps
+          if (signal && !Moteur.position(moteur.lire(), t).devantSignal) return;
+          appel.querySelector('p').innerHTML = signal
+            ? `Train n° <b>${m[1]}</b> arrêté devant le <b>${signal[1]}</b>, à toi.`
+            : `Train n° <b>${m[1]}</b> : ${m[2]}. À toi.`;
           appel.classList.add('visible');
           Sonnerie.gong();
         }, DELAI_APPEL_MS);
