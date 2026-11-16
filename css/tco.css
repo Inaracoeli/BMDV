@@ -285,3 +285,58 @@ table.page td:not(.heure):not(.obs) { color: #12317a; }
 #guide .schema .nvoie { font: 10px Arial, sans-serif; text-anchor: middle; fill: #8a8d92; }
 #guide .schema .depeche { fill: none; stroke: #12317a; stroke-width: 1.6; stroke-dasharray: 4 3; }
 #guide .schema .train.detresse { fill: var(--rouge); }
+
+/* ---------- Point E : clés, aiguilles, serrures et leviers ---------- */
+.aig { stroke: #d3ccb2; transition: stroke .3s; }
+.aig[data-pos="renversee"] { stroke: var(--voie); }
+#E_B_CLE, #E_B_CLF { transition: opacity .3s; }
+#E_B_CLE[data-present="0"], #E_B_CLF[data-present="0"] { opacity: .15; }
+#E_B_CLE[data-libre="1"] use, #E_B_CLF[data-libre="1"] use { filter: drop-shadow(0 0 5px #ffd34d); }
+.serrure .pene { fill: url(#g-chrome); stroke: #4a4e54; stroke-width: 1.2; transition: transform .35s ease-in-out; }
+.serrure[data-verrou="0"] .pene { transform: translateX(-30px); }
+.serrure .barillet { transition: transform .3s ease-in-out; }
+.serrure[data-verrou="0"] .barillet { transform: rotate(90deg); }
+.serrure .cle-serrure { display: none; cursor: pointer; }
+.serrure[data-cle="1"] .cle-serrure { display: inline; }
+.serrure .temoin { fill: #4a2a2a; stroke: #111; }
+.serrure[data-verrou="0"] .temoin { fill: #62e36b; filter: drop-shadow(0 0 4px #62e36b); }
+.lbl-cle { font: bold 9px Arial, sans-serif; text-anchor: middle; fill: #23262a; }
+.levier-aig .bras { transition: transform .35s ease-in-out; transform: rotate(-30deg); }
+.levier-aig[data-pos="renversee"] .bras { transform: rotate(30deg); }
+.levier-aig .dir-n, .levier-aig .dir-r { fill: none; stroke: #3f6234; stroke-width: 4; stroke-linecap: round; transition: stroke .3s; }
+.levier-aig[data-pos="normale"] .dir-n, .levier-aig[data-pos="renversee"] .dir-r { stroke: #f4f4ee; }
+
+/* ---------- Tableau d'enclenchement ---------- */
+#tableau { width: 98vw; max-width: none; max-height: 94vh; display: none; flex-direction: column; overflow: hidden; }
+#tableau[open] { display: flex; }
+#tableau .outils { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }
+#tableau .outils .espace { flex: 1; }
+#tableau .outils button, #tableau .importer { font: 13px Arial, sans-serif; background: #fff; border: 1px solid #8a8d92; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+#tableau .outils button.actif { background: #d9730d; color: #fff; border-color: #a85608; }
+#tableau .legende { margin: 0; font-size: 12.5px; color: #55595e; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+#tableau .legende .v { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border: 1px solid #9a9da1; background: #fff; font-weight: bold; margin-left: 8px; }
+#tableau .corps { overflow: auto; flex: 1; }
+#tableau .aide { font-size: 12px; color: #6b6f74; margin: 8px 0 0; }
+.matrice { border-collapse: collapse; font: 12.5px Arial, sans-serif; background: #fffdf3; }
+.matrice th, .matrice td { border: 1px solid #b4b6b9; }
+.matrice thead th { background: #ece6cc; position: sticky; top: 0; z-index: 1; }
+.matrice thead tr:nth-child(2) th { top: 25px; }
+.matrice th.groupe { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 4px; }
+.matrice th.coin { min-width: 250px; text-align: left; padding: 6px 8px; font-size: 13px; vertical-align: bottom; }
+.matrice th.coin span { display: block; font-weight: normal; color: #6b6f74; text-align: right; }
+.matrice th.coin:last-child { min-width: 70px; text-align: center; }
+.matrice th.cond { height: 170px; width: 34px; min-width: 34px; padding: 4px 0; vertical-align: bottom; }
+.matrice th.cond div { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; margin: 0 auto; font-weight: normal; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+.matrice .pastille, #tableau .legende .pastille { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #d3d0c4; border: 1px solid #8a8d92; }
+.matrice th.cond.vrai .pastille, #tableau .legende .pastille.vrai { background: #3fa34d; border-color: #2a6e33; }
+.matrice th.libelle { text-align: left; font-weight: normal; padding: 4px 8px; white-space: nowrap; background: #faf7e8; position: sticky; left: 0; }
+.matrice tr.intertitre td { background: #1b1e21; color: #f2f2ee; font-weight: bold; padding: 4px 8px; letter-spacing: .5px; }
+.matrice td.case { width: 34px; height: 26px; text-align: center; font-weight: bold; font-size: 15px; }
+.matrice td.case.oui { color: #1e7a2f; background: #e3f3df; }
+.matrice td.case.non { color: #b3261e; background: #fae3e0; }
+.matrice td.case.interdite { background: repeating-linear-gradient(45deg, #ece9dc 0 4px, #ddd9c8 4px 8px); }
+#tableau.edition .matrice td.case:not(.interdite) { cursor: pointer; }
+#tableau.edition .matrice td.case:not(.interdite):hover { outline: 2px solid #d9730d; outline-offset: -2px; }
+.etat-ligne { text-align: center; font-size: 11.5px; font-weight: bold; padding: 0 6px; }
+.etat-ligne.permis { color: #1e7a2f; } .etat-ligne.refuse { color: #b3261e; }
+#tableau .legende .etat-ligne { padding: 0; margin-left: 8px; }

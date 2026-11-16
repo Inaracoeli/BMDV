@@ -81,6 +81,19 @@ const TCO = (function () {
     allumer('T_C_AUE', etat.auE === 'I' && 'rouge');
     el('E_B_VCM1').dataset.pos = etat.vcm[1];
     el('E_B_VCM2').dataset.pos = etat.vcm[2];
+    // Point E : Au E (blanc donnée / strié refusée), clés, serrures et leviers d'aiguille
+    const cond = Moteur.conditions(etat);
+    basculer('E_V_AUE', !cond.aueDonnee);
+    const pe = etat.pointE;
+    [['E', 'E_B_CLE', 1], ['F', 'E_B_CLF', 2]].forEach(([aig, idCle, n]) => {
+      el(idCle).dataset.present = pe.cles[aig] === 'vcm' ? '1' : '0';
+      el(idCle).dataset.libre = pe.cles[aig] === 'vcm' && etat.vcm[n] === 'F' ? '1' : '0';
+      const ser = el(`E_B_SER${aig}`);
+      ser.dataset.cle = pe.cles[aig] === 'serrure' ? '1' : '0';
+      ser.dataset.verrou = pe.serrures[aig] ? '1' : '0';
+      el(`E_B_LEV${aig}`).dataset.pos = pe.aiguilles[aig];
+      el(`T_AIG_${aig}`).dataset.pos = pe.aiguilles[aig];
+    });
     el('CONS_C_GARE').dataset.pos = etat.gare;
     allumer('CONS_C_GARE', etat.gare === 'HS' && 'blanc');
 
@@ -177,6 +190,16 @@ const TCO = (function () {
     clic('T_C_AUE', { type: 'B_AU_E' });
     clic('E_B_VCM1', { type: 'B_VCM', numero: 1 });
     clic('E_B_VCM2', { type: 'B_VCM', numero: 2 });
+    clic('E_B_CLE', { type: 'B_CLE', cle: 'E' });
+    clic('E_B_CLF', { type: 'B_CLE', cle: 'F' });
+    ['E', 'F'].forEach((aig) => {
+      el(`E_B_SER${aig}`).addEventListener('click', (e) => {
+        // La clé engagée dans la serrure se reprend en cliquant dessus
+        moteur.agir(e.target.closest('.cle-serrure') && moteur.lire().pointE.serrures[aig]
+          ? { type: 'B_CLE', cle: aig } : { type: 'B_SERRURE', aiguille: aig });
+      });
+      clic(`E_B_LEV${aig}`, { type: 'B_LEVIER', aiguille: aig });
+    });
     clic('CONS_C_GARE', { type: 'B_GARE' });
     el('BTN_LIGNE').addEventListener('click', () => Schema.ouvrirFenetre(moteur.lire()));
     demarrerHorloge();
@@ -185,6 +208,8 @@ const TCO = (function () {
     moteur.abonner((etat, resultat, action) => {
       afficher(etat);
       if (action && action.type === 'B_GARE' && resultat) toast(resultat.message, resultat.alerte ? 9000 : 4500);
+      // Manœuvre refusée par les enclenchements : le motif s'affiche
+      if (action && resultat && !resultat.ok && /^B_(VCM|CLE|SERRURE|LEVIER)$/.test(action.type)) toast(resultat.message, 6000);
     });
   }
 

@@ -233,7 +233,7 @@
     blocageSemaphore: 'Blocage du sémaphore derrière un train',
     redditionSemaphoreBloque: 'Reddition : sémaphore bloqué exigé',
     redditionAnnonceAvantArrivee: "Reddition : annonce avant l'arrivée exigée",
-    approche: 'EAP : carré non refermable si la ZAP est occupée',
+    approche: "EAP : enclenchement d'approche actif (Vcm bloqué)",
   };
   const cases = {};
   Object.entries(ENCLENCHEMENTS).forEach(([nom, libelle]) => {
@@ -284,7 +284,7 @@
     boutonsAcceleration.forEach(([facteur, b]) => b.classList.toggle('actif', etat.acceleration === facteur));
     $('schema').innerHTML = Schema.svg(etat, { trains: true });
     Object.entries(carres).forEach(([voie, b]) => {
-      b.textContent = `${etat.voies[voie].carre.ferme ? 'Ouvrir' : 'Fermer'} le carré C${voie[1]}`;
+      b.textContent = etat.voies[voie].carre.force ? `Lever le dérangement du carré C${voie[1]}` : `Carré C${voie[1]} fermé (dérangement)`;
     });
     afficherTrains(etat);
     if (resultat && resultat.message) {

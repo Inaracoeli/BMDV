@@ -281,16 +281,78 @@ essai('longueurs de ligne réglables, la V2 retombe sur Alfa', () => {
   assert.strictEqual(Moteur.formatPK(g2.pk(g2.fin)), '100,000');
 });
 
-essai('EAP : enclenchée si ZAP occupée et carré ouvert, s\'oppose à la fermeture du carré', () => {
+essai('EAP : enclenchée si ZAP occupée et carré ouvert, libérée à la libération de z1', () => {
   const m = Moteur.creer();
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
   assert.ok(!occ(m).eap);
-  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5', longueur: 300 });
   jusqua(m, () => occ(m).approche);
   assert.ok(occ(m).eap);
-  assert.ok(!m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true }).ok);
-  m.agir({ type: 'TRAIN_SUPPRIMER', id: train(m).id });
+  assert.ok(/EAP C1 libre/.test(m.agir({ type: 'B_VCM', numero: 1 }).message));
+  jusqua(m, () => occ(m).zoneA && !occ(m).approche);
+  assert.ok(occ(m).eap); // toujours enclenchée tant que z1 est occupée
+  jusqua(m, () => !occ(m).zoneA);
   assert.ok(!occ(m).eap);
-  assert.ok(m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true }).ok);
+  assert.ok(m.agir({ type: 'B_VCM', numero: 1 }).ok);
+});
+
+essai('point E : Au E, Vcm, clé, serrure et levier dans l\'ordre du tableau', () => {
+  const m = Moteur.creer();
+  const e = () => m.lire().pointE;
+  const v1 = () => m.lire().voies.V1;
+  assert.strictEqual(m.lire().auE, 'I');
+  assert.deepStrictEqual(m.lire().vcm, { 1: 'O', 2: 'O' });
+  assert.ok(!m.agir({ type: 'B_VCM', numero: 1 }).ok); // pas d'Au E
+  assert.ok(!m.agir({ type: 'B_CLE', cle: 'E' }).ok);  // clé prisonnière du Vcm sur O
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  assert.ok(Moteur.conditions(m.lire()).aueDonnee);
+  assert.ok(m.agir({ type: 'B_VCM', numero: 1 }).ok);
+  assert.ok(v1().carre.ferme);
+  // Un train s'arrête au carré fermé : ZAP occupée mais EAP libre
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '3' });
+  jusqua(m, () => train(m).v === 0);
+  assert.ok(occ(m).approche && !occ(m).eap);
+  assert.ok(!m.agir({ type: 'B_LEVIER', aiguille: 'E' }).ok); // serrure verrouillée
+  assert.ok(m.agir({ type: 'B_CLE', cle: 'E' }).ok);
+  assert.strictEqual(e().cles.E, 'serrure');
+  assert.ok(m.agir({ type: 'B_SERRURE', aiguille: 'E' }).ok);
+  assert.ok(m.agir({ type: 'B_LEVIER', aiguille: 'E' }).ok);
+  assert.strictEqual(e().aiguilles.E, 'renversee');
+  assert.ok(!m.agir({ type: 'B_SERRURE', aiguille: 'E' }).ok); // aiguille renversée
+  assert.ok(!m.agir({ type: 'B_CLE', cle: 'E' }).ok);           // serrure ouverte
+  assert.ok(!m.agir({ type: 'B_VCM', numero: 1 }).ok);          // clé absente
+  m.agir({ type: 'B_LEVIER', aiguille: 'E' });
+  assert.ok(m.agir({ type: 'B_SERRURE', aiguille: 'E' }).ok);
+  assert.ok(m.agir({ type: 'B_CLE', cle: 'E' }).ok);
+  assert.ok(m.agir({ type: 'B_VCM', numero: 1 }).ok);
+  assert.ok(!v1().carre.ferme);
+  pendant(m, 6);
+  assert.ok(train(m).v > 0);
+});
+
+essai('point E : Au E refusée tant que z1 ou z2 est occupée', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V2', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V2', numero: '2', longueur: 300 });
+  jusqua(m, () => Moteur.occupation(m.lire(), 'V2').zoneA);
+  assert.ok(!Moteur.conditions(m.lire()).aueDonnee);
+  assert.ok(/Au E donnée/.test(m.agir({ type: 'B_VCM', numero: 1 }).message));
+});
+
+essai('tableau d\'enclenchement modifiable, conservé à la réinitialisation', () => {
+  const m = Moteur.creer();
+  assert.ok(m.agir({ type: 'TABLEAU_CASE', ligne: 'vcm1F', colonne: 'aueDonnee', valeur: null }).ok);
+  assert.ok(m.agir({ type: 'B_VCM', numero: 1 }).ok); // Au E n'est plus exigée
+  assert.ok(!m.agir({ type: 'TABLEAU_CASE', ligne: 'aueDonnee', colonne: 'eap1Libre', valeur: true }).ok);
+  m.agir({ type: 'TABLEAU_CASE', ligne: 'levierE', colonne: 'z1Libre', valeur: false });
+  m.agir({ type: 'REINITIALISER' });
+  assert.strictEqual(m.lire().tableau.levierE.z1Libre, false);
+  assert.ok(!('aueDonnee' in m.lire().tableau.vcm1F));
+  m.agir({ type: 'TABLEAU', tableau: 'defaut' });
+  assert.deepStrictEqual(m.lire().tableau, Moteur.TABLEAU_DEFAUT);
 });
 
 essai('carré fermé : pas d\'EAP, le train s\'arrête même sémaphore ouvert', () => {
