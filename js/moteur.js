@@ -76,6 +76,7 @@
     750: { libelle: '750 m (fret)', vmax: 100, acceleration: 0.15, freinage: 0.45 },
   };
   const FREIN_URGENCE = 1.2;   // m/s²
+  const VITESSE_VUE = 30 / 3.6; // marche à vue sous ordre MV
   const MARGE_ARRET = 20;      // un train s'arrête la tête à 20 m du signal fermé
   const PAS = 0.25;            // pas de calcul, en secondes de temps simulé
   const ACCELERATIONS = [1, 2, 5, 10, 20];
@@ -123,6 +124,8 @@
       // Carré protégeant la gare (C1 en voie 1, C2 en voie 2), normalement ouvert ;
       // fermé par son Vcm au point E, ou par le formateur (dérangement : force)
       carre: { ferme: false, force: false },
+      // Dérangement : signal fermé sur le terrain alors que le TCO le montre ouvert
+      terrain: { carre: false, sema: false },
     };
   }
 
@@ -147,6 +150,9 @@
       tableau: JSON.parse(JSON.stringify(TABLEAU_DEFAUT)),
       // Historique de la séance pour le tableau de bord du formateur (le plus récent en dernier)
       historique: [],
+      // Ordres de franchissement délivrés par Bravo (souches), et numéros pré-imprimés
+      ordres: [],
+      numerosOrdres: { C: 380000, S: 840000, MV: 820000 },
       gare: 'ES',         // commutateur gare : ES en service, HS hors service (gare temporaire, IN1508)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
@@ -319,7 +325,10 @@
         : /^AVAL_/.test(action.type) ? POSTES[action.voie] && POSTES[action.voie].aval : acteur(action.type);
       const messages = action.type === 'TEMPS' ? resultat.message.split(' · ') : [resultat.message];
       const h = Date.now();
-      messages.forEach((m) => etat.historique.push({ h, qui: qui || acteur(action.type), type: action.type, ok: !!resultat.ok, message: m }));
+      messages.forEach((m) => etat.historique.push({
+        h, qui: /^Conducteur/.test(m) ? 'Conducteur' : qui || acteur(action.type),
+        type: action.type, ok: !!resultat.ok, alerte: !!resultat.alerte, message: m,
+      }));
       if (etat.historique.length > HISTORIQUE_MAX) etat.historique.splice(0, etat.historique.length - HISTORIQUE_MAX);
     }
 
@@ -503,7 +512,14 @@
 
     function pas(t, g, h, evenements) {
       const v = etat.voies[t.voie];
-      const franchissable = () => t.franchir || (v.sema.ouvert && !v.carre.ferme);
+      // Le conducteur franchit un signal fermé avec l'ordre correspondant à ce qu'il voit :
+      // ordre C devant le carré, ordre S ou MV devant le sémaphore
+      const franchissable = () => {
+        if (t.franchir) return true;
+        const a = aspect(v);
+        const o = t.ordres || [];
+        return !a || (a === 'carre' && o.includes('C')) || (a === 'semaphore' && (o.includes('S') || o.includes('MV')));
+      };
 
       // Point d'arrêt visé : signal fermé en vue, ou quai en terminus
       let cible = null;
@@ -524,6 +540,13 @@
         if (t.v === 0) {
           if (cible != null && cible - t.s <= 0.5) {
             t.demarrage = null;
+            // Le conducteur signale au poste ce qu'il voit
+            const a = t.s < g.signal ? aspect(v) : null;
+            if (a && t.signale !== a) {
+              t.signale = a;
+              const n = t.voie[1];
+              evenements.push(`Conducteur du train ${t.numero} : arrêté devant le ${a === 'carre' ? `carré C${n}` : `sémaphore S${n}`}`);
+            }
             if (t.destination === 'Bravo' && Math.abs(cible - arretQuai(g, t)) < 0.5) {
               t.terminus = true;
               evenements.push(`Train ${t.numero} terminus Bravo, à quai (${t.voie})`);
@@ -548,7 +571,8 @@
             if (requis >= 0.95 * t.b) dec = Math.min(requis, FREIN_URGENCE);
           }
         }
-        t.v = dec > 0 ? Math.max(0, t.v - dec * h) : Math.min(t.vmax, t.v + t.a * h);
+        const vlim = t.vue ? Math.min(t.vmax, VITESSE_VUE) : t.vmax; // marche à vue (ordre MV)
+        t.v = dec > 0 ? Math.max(0, t.v - dec * h) : Math.min(vlim, t.v + t.a * h);
         s1 = t.s + ((v0 + t.v) / 2) * h;
         // Arrêt précis au point visé, quand il est atteignable
         if (cible != null && dec > 0 && dec < FREIN_URGENCE && (s1 >= cible || (t.v === 0 && cible - s1 < 5))) {
@@ -566,9 +590,13 @@
           t.arrete = true;
           t.urgence = true;
         } else {
-          evenements.push(`Train ${t.numero} franchit le signal (${t.voie})`);
+          const ordres = t.ordres && t.ordres.length ? ` avec ordre ${t.ordres.join(' + ')}` : '';
+          evenements.push(`Train ${t.numero} franchit le signal${ordres} (${t.voie})`);
         }
+        if (t.ordres && t.ordres.includes('MV') && t.mvVue) t.vue = true;
         t.franchir = false;
+        t.ordres = [];
+        t.signale = null;
       }
       t.s = s1;
 
@@ -685,6 +713,66 @@
         return ok(`Redémarrage devant un signal : ${s} s`);
       },
 
+      // ---------- Ordres de franchissement (bulletins C, S, MV) ----------
+      // a.ordre : 'C' | 'S' | 'MV' ; a.champs : contenu du formulaire rempli par Bravo.
+      // L'ordre est enregistré tel quel ; le conducteur ne l'utilise que si la case
+      // principale est cochée. Les écarts sont notés pour le tableau de bord.
+      B_ORDRE(a) {
+        const ordre = ['C', 'S', 'MV'].includes(a.ordre) ? a.ordre : null;
+        if (!ordre) return sansEffet('Ordre inconnu');
+        const ch = a.champs || {};
+        const cases = ch.cases || {};
+        etat.numerosOrdres[ordre] += 1;
+        const numero = String(etat.numerosOrdres[ordre]);
+        const t = etat.trains.find((x) => x.numero === String(ch.train || '').trim());
+        const remarques = [];
+        const manque = (cle, libelle) => { if (!String(ch[cle] || '').trim()) remarques.push(`${libelle} non rempli`); };
+        manque('train', 'N° du train'); manque('date', 'Date'); manque('localisation', 'Localisation du train');
+        manque('emetteur', "Localisation de l'émetteur"); manque('heure', 'Heure'); manque('motif', 'Motif');
+        if (ordre === 'MV') manque('z', 'Identification unique');
+        const principale = { C: 'franchirCarre', S: 'franchirSemaphore', MV: 'penetrer' }[ordre];
+        if (!cases[principale]) remarques.push('case principale non cochée : le conducteur ne peut pas franchir');
+        if (!t) {
+          if (String(ch.train || '').trim()) remarques.push(`aucun train ${ch.train} sur la ligne`);
+        } else {
+          const v = etat.voies[t.voie];
+          const n = t.voie[1];
+          const g = geometrie(etat, t.voie);
+          const vu = t.s < g.signal ? aspect(v) : null;
+          if (ordre !== 'MV' && ch.signal && ch.signal !== `C${n}`) remarques.push(`signal ${ch.signal} indiqué, le train est au signal C${n}`);
+          if (vu === 'carre' && ordre !== 'C') remarques.push(`le train est devant le carré C${n} : ordre C nécessaire`);
+          if (vu === 'semaphore' && ordre === 'C') remarques.push(`le train est devant le sémaphore S${n} : ordre S ou MV`);
+          if (!vu) remarques.push('le train n\'est pas arrêté devant un signal fermé');
+          // Canton suivant occupé, ou voie libre non reçue : l'ordre MV est exigé (fiches 2.2 et 2.4)
+          const devant = etat.trains.some((x) => x !== t && x.voie === t.voie && !x.attenteDepart && x.s - x.longueur > g.signal);
+          const occupe = v.annonceEmise || v.sema.bloque || devant;
+          const avecMV = ordre === 'MV' || (t.ordres || []).includes('MV');
+          if (occupe && !avecMV) remarques.push('canton suivant occupé ou voie libre non reçue : ordre MV nécessaire');
+          if (ordre === 'MV') {
+            if (!cases.marcheAVue) remarques.push('marche à vue non cochée');
+            if (ch.poste && ch.poste !== POSTES[t.voie].aval) remarques.push(`marche à vue jusqu'à ${ch.poste} : le poste suivant est ${POSTES[t.voie].aval}`);
+            if (!cases.arretPoste) remarques.push('arrêt au poste suivant non coché');
+          }
+          if (cases[principale]) {
+            t.ordres = [...new Set([...(t.ordres || []), ordre])];
+            if (ordre === 'MV' && cases.marcheAVue) t.mvVue = true;
+          }
+        }
+        etat.ordres.push({ ordre, numero, h: Date.now(), champs: ch, voie: t ? t.voie : null, remarques });
+        if (etat.ordres.length > 60) etat.ordres.shift();
+        const message = `Ordre ${ordre} n° ${numero} délivré${t ? ` au train ${t.numero}` : ''}`;
+        return remarques.length
+          ? { ok: true, alerte: true, message: `${message} — à reprendre : ${remarques.join(' ; ')}` }
+          : ok(`${message}, conforme`);
+      },
+      // Dérangement : signal fermé sur le terrain, le TCO le montre ouvert
+      TERRAIN(a) {
+        const v = etat.voies[a.voie];
+        if (!v || !['carre', 'sema'].includes(a.signal)) return sansEffet('Signal inconnu');
+        v.terrain[a.signal] = !v.terrain[a.signal];
+        const nom = a.signal === 'carre' ? `Carré C${a.voie[1]}` : `Sémaphore S${a.voie[1]}`;
+        return ok(`${nom} : ${v.terrain[a.signal] ? 'fermé sur le terrain (le TCO le montre ouvert)' : 'dérangement levé'}`);
+      },
       B_AU_E(a) {
         etat.auE = a.position || (etat.auE === 'A' ? 'I' : 'A');
         return ok(`Bravo met le commutateur Au E sur ${etat.auE}`);
@@ -868,6 +956,14 @@
     };
   }
 
+  // Ce que présente le signal C1 (C2) sur le terrain : le carré, s'il est fermé, sinon le
+  // sémaphore s'il est fermé, sinon rien (signal ouvert). Le terrain peut différer du TCO.
+  function aspect(v) {
+    if (v.carre.ferme || (v.terrain && v.terrain.carre)) return 'carre';
+    if (!v.sema.ouvert || (v.terrain && v.terrain.sema)) return 'semaphore';
+    return null;
+  }
+
   // Ce que les trains occupent sur une voie, pour l'affichage
   function occupation(etat, voie) {
     const g = geometrie(etat, voie);
@@ -907,6 +1003,9 @@
     return {
       libelle,
       devantSignal: t.v === 0 && !t.arrete && x >= g.debutZap && x < g.signal,
+      aspect: x < g.signal ? aspect(etat.voies[t.voie]) : null,
+      ordres: t.ordres || [],
+      vue: !!t.vue,
       redemarre: t.demarrage != null,
       pkTete: formatPK(g.pk(x)),
       pkQueue: formatPK(g.pk(x - t.longueur)),
@@ -915,7 +1014,7 @@
   }
 
   return {
-    creer, etatInitial, occupation, position, geometrie, formatPK, voieDe, conditions, manquantes,
+    creer, etatInitial, occupation, position, aspect, geometrie, formatPK, voieDe, conditions, manquantes,
     CONDITIONS, LIGNES_TABLEAU, COLONNES_DERIVEES, TABLEAU_DEFAUT,
     POSTES, TYPES, ACCELERATIONS, LIGNE, SECTIONS,
   };

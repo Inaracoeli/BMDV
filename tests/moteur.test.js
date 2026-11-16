@@ -493,6 +493,64 @@ essai('reprise en canton occupé : train encore entre Alfa et Bravo', () => {
   assert.ok(v.annonceRecue && !v.annonceEmise);
 });
 
+const champsS = (train, extra = {}) => ({
+  train, date: '17/11/2026', localisation: 'devant C1', emetteur: 'Poste de Bravo', heure: '8 h 52', motif: 'dérangement',
+  signal: 'C1', cases: { franchirSemaphore: true }, ...extra,
+});
+
+essai('ordre S : le conducteur signale le sémaphore fermé, franchit avec l\'ordre', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '5', longueur: 50 });
+  jusqua(m, () => train(m).v === 0);
+  pendant(m, 2);
+  assert.ok(m.lire().historique.some((x) => x.qui === 'Conducteur' && /sémaphore S1/.test(x.message)));
+  pendant(m, 10);
+  assert.ok(train(m).v === 0);
+  const r = m.agir({ type: 'B_ORDRE', ordre: 'S', champs: champsS('5') });
+  assert.ok(r.ok && !r.alerte, r.message);
+  assert.strictEqual(m.lire().ordres[0].numero, '840001');
+  jusqua(m, () => occ(m).zoneA);
+  assert.ok(!m.lire().trains[0].urgence && m.lire().voies.V1.sema.bloque);
+});
+
+essai('ordre S devant le carré : refusé par le conducteur, signalé au formateur', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'B_CARRE', voie: 'V1', ferme: true });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '7', longueur: 50 });
+  jusqua(m, () => train(m).v === 0);
+  const r = m.agir({ type: 'B_ORDRE', ordre: 'S', champs: champsS('7') });
+  assert.ok(r.alerte && /ordre C nécessaire/.test(r.message));
+  pendant(m, 10);
+  assert.strictEqual(train(m).v, 0);
+  assert.ok(m.agir({ type: 'B_ORDRE', ordre: 'C', champs: { ...champsS('7'), cases: { franchirCarre: true } } }).ok);
+  jusqua(m, () => occ(m).zoneA);
+});
+
+essai('ordre MV : canton occupé, marche à vue jusqu\'au poste suivant', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_ANNONCE', voie: 'V1' }); // voie libre non reçue de Charlie
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '9', longueur: 50 });
+  jusqua(m, () => train(m).v === 0);
+  const r = m.agir({ type: 'B_ORDRE', ordre: 'S', champs: champsS('9') });
+  assert.ok(r.alerte && /ordre MV nécessaire/.test(r.message));
+  const mv = { ...champsS('9'), z: 'M dupont', poste: 'Charlie', cases: { penetrer: true, marcheAVue: true, arretPoste: true } };
+  const r2 = m.agir({ type: 'B_ORDRE', ordre: 'MV', champs: mv });
+  assert.ok(r2.ok && !r2.alerte, r2.message);
+  pendant(m, 120);
+  assert.ok(train(m).vue && train(m).v <= 30 / 3.6 + 1e-6);
+});
+
+essai('dérangement terrain : sémaphore fermé sur le terrain, ouvert au TCO', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TERRAIN', voie: 'V1', signal: 'sema' });
+  assert.ok(m.lire().voies.V1.sema.ouvert);
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '3', longueur: 50 });
+  jusqua(m, () => train(m).v === 0);
+  assert.strictEqual(Moteur.position(m.lire(), train(m)).aspect, 'semaphore');
+});
+
 essai('réinitialisation', () => {
   const m = Moteur.creer();
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });

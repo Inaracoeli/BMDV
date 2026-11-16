@@ -24,6 +24,7 @@ la base de données, accessible uniquement après authentification.
 | `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
 | `js/guide.js` | Guides ouverts par le bouton GUIDE : « Faire circuler un train » et « Gare temporaire (ES / HS) » |
 | `js/tableau.js` | Tableau d'enclenchement du point E (bouton TABLEAU D'ENCLENCH.) : consultation, modification, export |
+| `js/ordres.js` | Ordres de franchissement (bulletins C, S, MV) remplis depuis la console |
 | `js/registre.js` | Registre de cantonnement de Bravo (bouton REGISTRE) : saisie, exemples, tenue du registre, impression |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 

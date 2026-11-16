@@ -202,9 +202,37 @@ const TCO = (function () {
     el('BTN_LIGNE').addEventListener('click', () => Schema.ouvrirFenetre(moteur.lire()));
     demarrerHorloge();
 
+    // Appel du conducteur : quelques secondes après son arrêt devant un signal fermé,
+    // une fenêtre l'annonce à l'élève (si le train n'est pas reparti entre-temps)
+    const DELAI_APPEL_MS = 4000;
+    const appel = document.createElement('div');
+    appel.id = 'appel';
+    appel.setAttribute('role', 'alertdialog');
+    appel.innerHTML = '<div class="carte"><div class="titre">☎ Appel du conducteur</div><p></p><button type="button">Compris</button></div>';
+    document.body.append(appel);
+    appel.querySelector('button').addEventListener('click', () => appel.classList.remove('visible'));
+    let vuJusqua = null;
+    function surveillerConducteur(etat) {
+      const hist = etat.historique || [];
+      if (vuJusqua == null) { vuJusqua = hist.length ? hist[hist.length - 1].h : 0; return; }
+      hist.filter((x) => x.qui === 'Conducteur' && x.h > vuJusqua).forEach((x) => {
+        const m = /train (\S+) : arrêté devant le (.+)$/.exec(x.message);
+        if (!m) return;
+        setTimeout(() => {
+          const t = moteur.lire().trains.find((tr) => tr.numero === m[1]);
+          if (!t || !Moteur.position(moteur.lire(), t).devantSignal) return;
+          appel.querySelector('p').innerHTML = `Train n° <b>${m[1]}</b> arrêté devant le <b>${m[2]}</b>, à toi.`;
+          appel.classList.add('visible');
+          Sonnerie.gong();
+        }, DELAI_APPEL_MS);
+      });
+      if (hist.length) vuJusqua = Math.max(vuJusqua, hist[hist.length - 1].h);
+    }
+
     document.addEventListener('pointerdown', Sonnerie.deverrouiller, { once: true });
     moteur.abonner((etat, resultat, action) => {
       afficher(etat);
+      surveillerConducteur(etat);
       // Aucun message sur le TCO : l'élève constate sur ses appareils (et sur le terrain).
       // Le détail (refus, motifs, alertes) est sur le tableau de bord du formateur.
     });

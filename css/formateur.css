@@ -168,3 +168,9 @@ details[open] summary { margin-bottom: 10px; }
 #historique li.refus .msg { color: #ffb347; }
 #historique li.refus .qui { background: #6b3a12; }
 #historique li.vide { display: block; color: var(--discret); }
+#ordres-bord { list-style: none; margin: 0; padding: 0; }
+#ordres-bord li { padding: 6px 4px; border-bottom: 1px solid var(--trait); font-size: 13.5px; }
+#ordres-bord .msg { display: block; color: #8fd18f; }
+#ordres-bord li.refus .msg { color: #ffb347; }
+#ordres-bord li.vide { color: var(--discret); }
+#incidents button.actif { border-color: var(--jaune); color: var(--jaune); }
