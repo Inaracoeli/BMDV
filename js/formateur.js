@@ -153,7 +153,12 @@
     if (t.aQuai) return ['À quai à Bravo, attend le départ', true];
     if (t.arrete && t.urgence) return [`${t.voie}, ${p.libelle} — arrêt d'urgence après franchissement du signal fermé`, true];
     if (t.arrete) return [`${t.voie}, ${p.libelle} — ${t.v > 0 ? 'freine sur ordre du formateur' : 'arrêté par le formateur'}`, true];
-    if (p.devantSignal) return [`${t.voie}, ${p.libelle} — ${p.redemarre ? 'se remet en marche' : 'arrêté devant le signal fermé'}`, true];
+    if (p.devantSignal) {
+      const vu = p.aspect === 'carre' ? `carré C${t.voie[1]}` : p.aspect === 'semaphore' ? `sémaphore S${t.voie[1]}` : 'signal';
+      const ordres = p.ordres.length ? ` · ordre ${p.ordres.join(' + ')} reçu` : '';
+      return [`${t.voie}, ${p.libelle} — ${p.redemarre ? 'se remet en marche' : `arrêté devant le ${vu}`}${ordres}`, true];
+    }
+    if (p.vue) return [`${t.voie}, ${p.libelle} — marche à vue (ordre MV)`, false];
     return [`${t.voie}, ${p.libelle}`, false];
   }
   let signature = null;
@@ -253,6 +258,9 @@
   };
   incident('Pédale intempestive V1', { type: 'TRAIN_PEDALE', voie: 'V1' });
   incident('Pédale intempestive V2', { type: 'TRAIN_PEDALE', voie: 'V2' });
+  // Signal fermé sur le terrain alors que le TCO le montre ouvert : le conducteur le signale
+  const terrains = [['V1', 'carre'], ['V1', 'sema'], ['V2', 'carre'], ['V2', 'sema']]
+    .map(([voie, signal]) => [voie, signal, incident('', { type: 'TERRAIN', voie, signal })]);
   const carres = {
     V1: incident('', { type: 'B_CARRE', voie: 'V1' }),
     V2: incident('', { type: 'B_CARRE', voie: 'V2' }),
@@ -287,7 +295,7 @@
     dernierEtat = etat;
     const hist = etat.historique || [];
     const bravo = hist.filter((x) => x.qui === 'Bravo');
-    const refus = bravo.filter((x) => !x.ok).length;
+    const refus = bravo.filter((x) => !x.ok || x.alerte).length;
     $('bilan-bravo').textContent = `${bravo.length - refus} effectuées · ${refus} refusées`;
     $('nb-refus').textContent = refus ? `(${refus})` : '';
     if (!etat.pointE) return;
@@ -310,9 +318,13 @@
       ['Aiguille F (terrain)', pe.aiguilles.F === 'normale' ? 'normale' : 'RENVERSÉE', pe.aiguilles.F !== 'normale'],
     ];
     $('installations').innerHTML = lignes.map(([n, v, marque]) => `<div class="inst${marque ? ' marque' : ''}"><span>${n}</span><b>${v}</b></div>`).join('');
-    const liste = hist.filter((x) => filtreHistorique === 'tout' || (x.qui === 'Bravo' && (filtreHistorique === 'bravo' || !x.ok)));
+    const liste = hist.filter((x) => filtreHistorique === 'tout' || (x.qui === 'Bravo' && (filtreHistorique === 'bravo' || !x.ok || x.alerte)));
+    $('ordres-bord').innerHTML = (etat.ordres || []).slice().reverse().map((o) => `
+      <li class="${o.remarques.length ? 'refus' : ''}"><b>Ordre ${o.ordre} n° ${o.numero}</b> · ${heure(o.h)} · train ${(o.champs.train || '?').replace(/</g, '&lt;')}
+        <span class="msg">${o.remarques.length ? o.remarques.join(' ; ').replace(/</g, '&lt;') : 'conforme'}</span></li>`).join('')
+      || '<li class="vide">Aucun ordre délivré.</li>';
     $('historique').innerHTML = liste.slice(-80).reverse().map((x) => `
-      <li class="${x.ok ? '' : 'refus'}"><time>${heure(x.h)}</time><span class="qui">${x.qui}</span>
+      <li class="${!x.ok || x.alerte ? 'refus' : ''}"><time>${heure(x.h)}</time><span class="qui">${x.qui}</span>
         <span class="msg">${x.message.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span></li>`).join('')
       || '<li class="vide">Rien pour le moment.</li>';
   }
@@ -327,6 +339,12 @@
     if (document.activeElement !== champRedemarrage) champRedemarrage.value = etat.redemarrage;
     boutonsAcceleration.forEach(([facteur, b]) => b.classList.toggle('actif', etat.acceleration === facteur));
     $('schema').innerHTML = Schema.svg(etat, { trains: true });
+    terrains.forEach(([voie, signal, b]) => {
+      const nom = signal === 'carre' ? `Carré C${voie[1]}` : `Sémaphore S${voie[1]}`;
+      const actif = etat.voies[voie].terrain && etat.voies[voie].terrain[signal];
+      b.textContent = actif ? `${nom} : lever le dérangement terrain` : `${nom} fermé sur le terrain (TCO ouvert)`;
+      b.classList.toggle('actif', !!actif);
+    });
     Object.entries(carres).forEach(([voie, b]) => {
       b.textContent = etat.voies[voie].carre.force ? `Lever le dérangement du carré C${voie[1]}` : `Carré C${voie[1]} fermé (dérangement)`;
     });

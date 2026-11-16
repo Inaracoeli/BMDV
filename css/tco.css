@@ -337,3 +337,43 @@ table.page td:not(.heure):not(.obs) { color: #12317a; }
 .etat-ligne.permis { color: #1e7a2f; } .etat-ligne.refuse { color: #b3261e; }
 #tableau .legende .etat-ligne { padding: 0; margin-left: 8px; }
 #tableau:not(.edition) .pastille, #tableau:not(.edition) .etat-ligne, #tableau:not(.edition) .live { display: none; }
+
+/* ---------- Ordres de franchissement (bulletins C, S, MV) ---------- */
+#ordre { width: min(860px, 96vw); }
+#ordre .formulaire { border: 2px solid #1b1d20; background: #fff; color: #111; font: 14px Arial, Helvetica, sans-serif; margin-bottom: 10px; }
+#ordre .titre-ordre { display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 2px solid #1b1d20; padding: 4px 0; }
+#ordre .titre-ordre h2 { margin: 0; font-size: 28px; }
+#ordre .titre-ordre h2 span { color: var(--couleur); }
+#ordre .titre-ordre em { position: absolute; right: 10px; top: 8px; font-size: 15px; }
+#ordre .bande { border-bottom: 2px solid #1b1d20; padding: 8px 14px; }
+#ordre .grise { background: #cfd1d3; }
+#ordre .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 40px; }
+#ordre .grille.trois { grid-template-columns: 1fr 1.6fr 1fr; gap: 6px 14px; }
+#ordre .champ .saisie { background: #fff; padding: 4px 6px 2px; min-height: 30px; display: flex; align-items: center; }
+#ordre .champ .etiquette { font-size: 12.5px; font-style: italic; margin-top: 2px; }
+#ordre .champ .etiquette b { font-size: 18px; font-style: normal; margin-right: 3px; }
+#ordre input, #ordre select, #ordre textarea { font: 14px Arial, sans-serif; border: 0; border-bottom: 1.5px dotted #444; background: transparent; width: 100%; padding: 2px 0; color: #12317a; }
+#ordre select { width: auto; min-width: 80px; }
+#ordre textarea { background: #fff; border: 0; padding: 4px 6px; margin-top: 4px; resize: vertical; border-bottom: 1.5px dotted #444; }
+#ordre .champ.large .saisie input { width: 100%; }
+#ordre .option { display: flex; gap: 12px; align-items: flex-start; margin: 8px 0; }
+#ordre .case { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+#ordre .case input { position: absolute; opacity: 0; width: 1px; }
+#ordre .case span { width: 26px; height: 26px; border: 2px solid #1b1d20; background: #fff; display: block; position: relative; }
+#ordre .case input:checked + span::after { content: '✕'; position: absolute; inset: 0; text-align: center; font: bold 20px/24px Arial; color: #12317a; }
+#ordre .case input:focus-visible + span { outline: 2px solid #d9730d; }
+#ordre .case small, #ordre small.code { font-size: 10.5px; font-weight: bold; }
+#ordre .option .texte { padding-top: 3px; line-height: 1.5; }
+#ordre .enligne { display: inline-flex; flex-direction: column; margin-left: 10px; vertical-align: top; background: #fff; padding: 2px 6px; min-width: 150px; }
+#ordre .enligne small { font-size: 10px; font-style: italic; color: #333; }
+#ordre .champ .enligne { flex-direction: row; gap: 6px; background: none; padding: 0; margin: 0; min-width: 0; width: 100%; }
+#ordre .croix { border-bottom: 2px solid #1b1d20; font: 15px monospace; letter-spacing: -1px; overflow: hidden; white-space: nowrap; padding: 2px 4px; }
+#ordre .reference { display: flex; align-items: center; gap: 14px; font-weight: bold; }
+#ordre .reference small { font-weight: normal; font-size: 10.5px; }
+#ordre .preimprime { color: #d6007e; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+#ordre .mode { font-size: 12px; padding: 6px 14px; font-style: italic; }
+#ordre .actions { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 14px; border-top: 1px solid #999; background: #f7f4e4; }
+#ordre .actions button { font: 15px Arial, sans-serif; padding: 7px 16px; border-radius: 5px; border: 1px solid #6b6f74; background: #fff; cursor: pointer; }
+#ordre .actions .delivrer { background: #d9730d; border-color: #a85608; color: #fff; font-weight: bold; }
+#ordre .souches { font-size: 13px; margin-bottom: 4px; }
+#ordre .souches ol { margin: 6px 0 0; }
