@@ -2,6 +2,14 @@
 const assert = require('node:assert');
 const Moteur = require('../js/moteur.js');
 
+// Les essais se font avec Alfa et Charlie joués à la main, sauf mention contraire
+const creerManuel = Moteur.creer;
+Moteur.creer = (...args) => {
+  const m = creerManuel(...args);
+  if (!args.length) m.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: false });
+  return m;
+};
+
 function essai(nom, f) {
   f();
   console.log('ok  ' + nom);
@@ -317,6 +325,15 @@ essai('postes automatiques : Alfa annonce au départ, Charlie rend voie libre à
   assert.ok(v().annonceRecue && !m.lire().trains[1].attenteDepart); // Alfa expédie le train 2
   jusqua(m, () => !v().annonceEmise); // Charlie rend voie libre après l'arrivée du train 1
   assert.ok(v().sonnerieReddition && !v().sema.bloque && m.lire().trains.length === 1);
+});
+
+essai('Alfa et Charlie automatiques par défaut à l\'ouverture et après réinitialisation', () => {
+  assert.strictEqual(Moteur.etatInitial().reglages.postesAutomatiques, true);
+  const m = creerManuel();
+  assert.strictEqual(m.lire().reglages.postesAutomatiques, true);
+  m.agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: false });
+  m.agir({ type: 'REINITIALISER' });
+  assert.strictEqual(m.lire().reglages.postesAutomatiques, true);
 });
 
 essai('commutateur de gare ES / HS', () => {

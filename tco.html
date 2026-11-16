@@ -6,7 +6,7 @@
 <title>BMDV — TCO Poste B</title>
 <link rel="stylesheet" href="css/tco.css">
 </head>
-<body>
+<body class="verrouille">
 
 <!--
   TCO du poste B (Bravo).
@@ -548,7 +548,21 @@
 </svg>
 
 <div id="toast" role="status" aria-live="polite"></div>
-<div id="seance" data-statut="sans-code" title="Code de séance du formateur : cliquer pour le saisir ou le changer"><span class="titre">Séance</span> <span class="code"></span> <span class="statut"></span></div>
+<!-- Écran d'accueil : masque le TCO tant que le téléphone du formateur n'a pas répondu -->
+<div id="accueil">
+  <div class="carte">
+    <div class="titre">BMDV</div>
+    <div class="sous-titre">Simulateur de block manuel de double voie · Poste B</div>
+    <label for="code-seance">Code de séance affiché sur le téléphone du formateur</label>
+    <input id="code-seance" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+    <div class="actions">
+      <button type="button" class="annuler" hidden>Annuler</button>
+      <button type="button" class="relier">Relier</button>
+    </div>
+    <p class="etat" role="status" aria-live="polite"></p>
+  </div>
+</div>
+<div id="seance" data-statut="sans-code" title="Changer de séance"><span class="titre">Séance</span> <span class="code"></span> <span class="statut"></span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>

@@ -28,8 +28,10 @@ la base de données, accessible uniquement après authentification.
 ## Utilisation
 
 1. Ouvrir `formateur.html` sur le téléphone : il crée la séance et affiche un code (par exemple `K7Q2-M9XD-3FPA`).
-2. Ouvrir `tco.html` sur le PC de l'élève : saisir ce code dans la fenêtre « Séance » (elle s'ouvre au premier
-   démarrage ; ensuite, cliquer sur la pastille en bas à droite pour changer de code).
+2. Ouvrir `tco.html` sur le PC de l'élève : un écran d'accueil masque le TCO. Y saisir ce code ; le TCO s'affiche dès
+   que le téléphone répond. Pour changer de séance, cliquer sur la pastille en bas à droite.
+
+À l'ouverture d'une séance, Alfa et Charlie sont automatiques (réglable dans l'onglet Postes de l'écran formateur).
 
 Le moteur tourne sur le PC du TCO, pour que les trains continuent si le téléphone se met en veille. Le code reste
 mémorisé des deux côtés jusqu'à « Nouvelle séance » sur le téléphone.

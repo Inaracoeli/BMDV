@@ -133,6 +133,31 @@ html, body {
 #seance .statut::before { content: "●"; margin: 0 4px 0 6px; color: #8a8f95; }
 #seance[data-statut="attente"] .statut::before { color: #ffb02e; }
 #seance[data-statut="relie"] .statut::before { color: #2fc650; }
+/* ---------- Écran d'accueil (code de séance) ---------- */
+#accueil { display: none; }
+body.verrouille #accueil {
+  display: flex; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center;
+  background: #17191c;
+}
+body.verrouille .tco, body.verrouille #seance, body.verrouille #toast { visibility: hidden; }
+#accueil .carte {
+  width: min(480px, 90vw); background: #f7f4e4; border: 2px solid #0f1012; border-radius: 10px;
+  padding: 26px 28px 22px; color: #2b2f33; font: 15px/1.4 Arial, Helvetica, sans-serif;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+}
+#accueil .titre { font: 700 34px Arial, sans-serif; letter-spacing: 8px; color: #1b1e21; }
+#accueil .sous-titre { color: #6b6f74; margin: 2px 0 22px; padding-bottom: 14px; border-bottom: 2px solid #d9730d; }
+#accueil label { display: block; margin-bottom: 8px; }
+#accueil input {
+  width: 100%; box-sizing: border-box; font: 700 26px "Courier New", monospace; letter-spacing: 3px; text-transform: uppercase;
+  padding: 10px 12px; border: 2px solid #55595e; border-radius: 6px; background: #fff;
+}
+#accueil .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+#accueil .actions button { font: 700 15px Arial, sans-serif; padding: 10px 22px; border-radius: 6px; cursor: pointer; border: 1px solid #55595e; background: #fdfcf5; }
+#accueil .actions .relier { background: #d9730d; border-color: #a85608; color: #fff; }
+#accueil .etat { min-height: 1.4em; margin: 14px 0 0; color: #55595e; }
+#accueil .etat.erreur { color: #b3261e; }
+
 #toast.visible { opacity: 1; transform: translate(-50%, 0); }
 
 /* ---------- Fenêtres (schéma de la ligne) ---------- */
@@ -149,16 +174,6 @@ html, body {
 .fenetre h1 small { font-size: 14px; font-weight: normal; color: #b9bcc0; margin-left: 10px; letter-spacing: 0; }
 .fenetre .fermer { font-size: 18px; color: #f2f2ee; background: none; border: 1px solid #6b6f74; border-radius: 4px; padding: 2px 10px; cursor: pointer; }
 .fenetre .schema-ligne { width: 100%; height: auto; display: block; }
-#fenetre-seance { width: min(460px, 92vw); }
-#fenetre-seance label { display: block; margin-bottom: 8px; }
-#fenetre-seance input {
-  width: 100%; box-sizing: border-box; font: 700 24px "Courier New", monospace; letter-spacing: 3px; text-transform: uppercase;
-  padding: 10px 12px; border: 2px solid #55595e; border-radius: 6px; background: #fff;
-}
-#fenetre-seance .erreur { color: #b3261e; margin: 8px 0 0; }
-#fenetre-seance .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-#fenetre-seance .actions button { font: 700 15px Arial, sans-serif; padding: 9px 18px; border-radius: 6px; cursor: pointer; border: 1px solid #55595e; background: #fdfcf5; }
-#fenetre-seance .actions .relier { background: #d9730d; border-color: #a85608; color: #fff; }
 
 /* ---------- Mini guide ---------- */
 #guide {

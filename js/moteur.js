@@ -138,7 +138,7 @@
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
         aideReddition: true,         // si Reddition est pressée seule, le bouton Sonnerie clignote
-        postesAutomatiques: false,   // Alfa et Charlie annoncent et rendent voie libre tout seuls
+        postesAutomatiques: true,    // Alfa et Charlie annoncent et rendent voie libre tout seuls (par défaut)
       },
       // Enclenchements du block ; le formateur peut les lever pour créer un dérangement
       enclenchements: {
