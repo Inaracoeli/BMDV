@@ -78,6 +78,8 @@
   const FREIN_URGENCE = 1.2;   // m/s²
   const VITESSE_VUE = 30 / 3.6; // marche à vue sous ordre MV
   const MARGE_ARRET = 20;      // un train s'arrête la tête à 20 m du signal fermé
+  const VITESSE_MANOEUVRE = 30 / 3.6; // mouvements de manœuvre en gare
+  const VISIBILITE = 300;      // distance à laquelle un conducteur voit le train qui le précède (m)
   const PAS = 0.25;            // pas de calcul, en secondes de temps simulé
   const ACCELERATIONS = [1, 2, 5, 10, 20];
 
@@ -146,6 +148,7 @@
         cles: { E: 'vcm', F: 'vcm' },           // 'vcm' (dans son Vcm) ou 'serrure' (dans la serrure de l'aiguille)
         serrures: { E: true, F: true },         // true : verrouillée, pêne sorti
         aiguilles: { E: 'normale', F: 'normale' }, // 'normale' ou 'renversee'
+        talonnees: { E: false, F: false },        // aiguille talonnée (prise en talon mal orientée)
       },
       tableau: JSON.parse(JSON.stringify(TABLEAU_DEFAUT)),
       // Historique de la séance pour le tableau de bord du formateur (le plus récent en dernier)
@@ -327,7 +330,8 @@
       const h = Date.now();
       messages.forEach((m) => etat.historique.push({
         h, qui: /^Conducteur/.test(m) ? 'Conducteur' : qui || acteur(action.type),
-        type: action.type, ok: !!resultat.ok, alerte: !!resultat.alerte, message: m,
+        type: action.type, ok: !!resultat.ok,
+        alerte: !!resultat.alerte || /talonn|heurte|sans autorisation|pris en pointe/.test(m), message: m,
       }));
       if (etat.historique.length > HISTORIQUE_MAX) etat.historique.splice(0, etat.historique.length - HISTORIQUE_MAX);
     }
@@ -500,6 +504,70 @@
     // Le conducteur voit le signal à partir de l'avertissement (début de la ZAP) :
     // s'il est fermé, il freine pour s'arrêter devant. S'il se ferme trop tard,
     // le train ne peut plus s'arrêter et le franchit.
+    // Train immédiatement devant, sur la même voie (hors trains en attente au départ)
+    function trainDevant(t) {
+      let devant = null;
+      etat.trains.forEach((x) => {
+        if (x === t || x.voie !== t.voie || x.attenteDepart || x.manoeuvre) return;
+        if (x.s > t.s && (!devant || x.s < devant.s)) devant = x;
+      });
+      return devant;
+    }
+
+    // ---------- Manœuvres en gare ----------
+    // Mouvements commandés par le formateur (chef de manœuvre / conducteur) :
+    //  - avancer : train à quai sur z1 (voie 1) → z3, pour dégager l'aiguille E
+    //  - rebrousser : de z3 (voie 1) vers z4 (voie 2) par E puis F, ou de z4 vers z3 par F puis E
+    // Le mouvement dure le temps de parcourir la distance à 30 km/h ; il occupe les zones traversées.
+    function preparerManoeuvre(t, mouvement) {
+      const pe = etat.pointE;
+      const res = { zones: {}, issue: null, incidents: [], arret: null };
+      const occupe = (voie, ...z) => { res.zones[voie] = [...(res.zones[voie] || []), ...z]; };
+      if (mouvement === 'avancer') {
+        if (t.voie !== 'V1' || t.gare !== 'z1') return { refus: 'Avancer jusqu\'à z3 : le train doit être à quai sur z1 (voie 1)' };
+        const g = geometrie(etat, 'V1');
+        if (t.longueur > g.finZoneB - g.aiguille - 30) return { refus: `Train ${t.numero} trop long pour tenir sur z3 et dégager E` };
+        occupe('V1', 'zoneA', 'zoneB');
+        if (pe.aiguilles.E !== 'normale') { res.incidents.push('E'); }
+        res.issue = { voie: 'V1', gare: 'z3', s: g.finZoneB - 20 };
+        res.distance = res.issue.s - t.s;
+        return res;
+      }
+      if (mouvement === 'rebrousser') {
+        const depuisV1 = t.voie === 'V1' && t.gare === 'z3';
+        const depuisV2 = t.voie === 'V2' && t.gare === 'z4';
+        if (!depuisV1 && !depuisV2) return { refus: 'Rebrousser : le train doit être sur z3 (voie 1) ou à quai sur z4 (voie 2)' };
+        const [prise, talon] = depuisV1 ? ['E', 'F'] : ['F', 'E'];
+        const g1 = geometrie(etat, 'V1');
+        if (t.longueur > g1.finZoneB - g1.aiguille - 30) return { refus: `Train ${t.numero} trop long pour la communication E–F` };
+        // Aiguille prise en pointe mal orientée : le conducteur s'arrête et appelle
+        if (pe.aiguilles[prise] !== 'renversee') { res.arret = prise; return res; }
+        if (pe.aiguilles[talon] !== 'renversee') res.incidents.push(talon);
+        occupe('V1', 'zoneA', 'zoneB');
+        occupe('V2', 'zoneA', 'zoneB');
+        if (depuisV1) {
+          const g2 = geometrie(etat, 'V2');
+          res.issue = { voie: 'V2', gare: 'z4', s: arretQuai(g2, t) };
+        } else {
+          res.issue = { voie: 'V1', gare: 'z3', s: g1.finZoneB - 20 };
+        }
+        res.distance = t.longueur + 450;
+        return res;
+      }
+      return { refus: 'Mouvement inconnu' };
+    }
+    function avancerManoeuvre(t, duree, evenements) {
+      const m = t.manoeuvre;
+      m.restant -= duree;
+      if (m.restant > 0) return;
+      t.voie = m.issue.voie;
+      t.s = m.issue.s;
+      t.gare = m.issue.gare;
+      t.manoeuvre = null;
+      t.v = 0;
+      evenements.push(`Train ${t.numero} : manœuvre terminée, arrêté sur ${t.gare} (${t.voie})`);
+    }
+
     function avancer(t, duree, evenements) {
       const g = geometrie(etat, t.voie);
       let reste = duree;
@@ -528,6 +596,12 @@
         const q = arretQuai(g, t);
         cible = cible == null ? q : Math.min(cible, q);
       }
+      // Train qui précède, vu par le conducteur à courte distance (ou en marche à vue)
+      const devant = trainDevant(t);
+      if (devant) {
+        const queue = devant.s - devant.longueur;
+        if (queue - t.s < VISIBILITE || t.vue) cible = cible == null ? queue - MARGE_ARRET : Math.min(cible, queue - MARGE_ARRET);
+      }
 
       const v0 = t.v;
       let s1;
@@ -549,6 +623,7 @@
             }
             if (t.destination === 'Bravo' && Math.abs(cible - arretQuai(g, t)) < 0.5) {
               t.terminus = true;
+              t.gare = t.voie === 'V1' ? 'z1' : 'z4';
               evenements.push(`Train ${t.numero} terminus Bravo, à quai (${t.voie})`);
             }
             return null;
@@ -598,6 +673,28 @@
         t.ordres = [];
         t.signale = null;
       }
+      // Passage sur l'aiguille de la communication (E en voie 1, F en voie 2)
+      if (t.s < g.aiguille && s1 >= g.aiguille) {
+        const aig = t.voie === 'V1' ? 'E' : 'F';
+        if (etat.pointE.aiguilles[aig] === 'renversee') {
+          if (aig === 'E') {
+            etat.pointE.talonnees.E = true;
+            evenements.push(`Train ${t.numero} talonne l'aiguille E renversée (V1)`);
+          } else {
+            evenements.push(`Train ${t.numero} pris en pointe par l'aiguille F renversée : arrêt d'urgence (V2)`);
+            t.arrete = true;
+            t.urgence = true;
+          }
+        }
+      }
+      // Heurt : le train rattrape celui qui le précède
+      if (devant && s1 > devant.s - devant.longueur - 1) {
+        s1 = Math.max(t.s, devant.s - devant.longueur - 1);
+        if (t.v > 0.5) evenements.push(`Train ${t.numero} heurte le train ${devant.numero} (${t.voie})`);
+        t.v = 0;
+        t.arrete = true;
+        t.urgence = true;
+      }
       t.s = s1;
 
       // Arrivée complète au poste suivant (queue sortie de la ligne)
@@ -638,6 +735,7 @@
           t.s = arretQuai(geometrie(etat, voie), t);
           t.v = 0;
           t.arrete = true;
+          t.gare = voie === 'V1' ? 'z1' : 'z4';
         }
         etat.trains.push(t);
         if (t.attenteDepart) {
@@ -663,6 +761,51 @@
         t.aQuai = false;
         return ok(`Train ${t.numero} : ordre de repartir`);
       },
+      // Manœuvre en gare (ordonnée par le formateur, qui joue le conducteur)
+      TRAIN_MANOEUVRE(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        if (t.manoeuvre) return sansEffet(`Train ${t.numero} : manœuvre déjà en cours`);
+        if (!t.gare || t.v > 0) return sansEffet(`Train ${t.numero} : pas arrêté en gare`);
+        const r = preparerManoeuvre(t, a.mouvement);
+        if (r.refus) return sansEffet(r.refus);
+        if (r.arret) {
+          // L'aiguille n'est pas orientée vers la voie demandée : le conducteur ne part pas
+          return { ok: true, alerte: true, message: `Conducteur du train ${t.numero} : aiguille ${r.arret} mal orientée, je ne peux pas manœuvrer` };
+        }
+        const notes = r.incidents.map((aig) => {
+          etat.pointE.talonnees[aig] = true;
+          return `aiguille ${aig} talonnée (prise en talon mal orientée)`;
+        });
+        t.manoeuvre = { mouvement: a.mouvement, zones: r.zones, issue: r.issue, restant: Math.max(5, r.distance / VITESSE_MANOEUVRE) };
+        t.terminus = true;
+        t.aQuai = false;
+        t.arrete = false;
+        t.signale = null;
+        const libelle = a.mouvement === 'avancer' ? 'avance jusqu\'à z3' : `rebrousse vers la voie ${r.issue.voie[1]}`;
+        const message = `Train ${t.numero} ${libelle} (manœuvre)`;
+        return notes.length ? { ok: true, alerte: true, message: `${message} — ${notes.join(' ; ')}` } : ok(message);
+      },
+      // Départ d'un train arrêté en gare vers le poste suivant de sa voie
+      TRAIN_DEPART(a) {
+        const t = trouver(a.id);
+        if (!t) return sansEffet('Train introuvable');
+        if (t.manoeuvre) return sansEffet(`Train ${t.numero} : manœuvre en cours`);
+        t.terminus = false;
+        t.aQuai = false;
+        t.arrete = false;
+        t.urgence = false;
+        t.gare = null;
+        t.origine = 'Bravo';
+        t.destination = POSTES[t.voie].aval;
+        return ok(`Train ${t.numero} : départ de Bravo vers ${t.destination} (${t.voie})`);
+      },
+      // Formateur : remise en état d'une aiguille talonnée
+      AIGUILLE_REPAREE(a) {
+        const aig = a.aiguille === 'F' ? 'F' : 'E';
+        etat.pointE.talonnees[aig] = false;
+        return ok(`Aiguille ${aig} remise en état`);
+      },
       // Autorise le train à franchir le signal fermé (tient lieu de bulletin pour l'instant)
       TRAIN_FRANCHIR(a) {
         const t = trouver(a.id);
@@ -687,7 +830,7 @@
         const duree = (a.dt / 1000) * etat.acceleration;
         const evenements = [];
         posteAutomatiques(duree * 1000, evenements);
-        etat.trains.slice().forEach((t) => avancer(t, duree, evenements));
+        etat.trains.slice().forEach((t) => (t.manoeuvre ? avancerManoeuvre(t, duree, evenements) : avancer(t, duree, evenements)));
         majPointE();
         return { ok: true, message: evenements.join(' · ') || null };
       },
@@ -818,6 +961,7 @@
         const e = etat.pointE;
         const refus = verifier(`levier${aig}`, `Levier ${aig}`);
         if (refus) return refus;
+        if (e.talonnees && e.talonnees[aig]) return sansEffet(`Levier ${aig} : l'aiguille talonnée ne suit pas le levier`);
         e.aiguilles[aig] = e.aiguilles[aig] === 'normale' ? 'renversee' : 'normale';
         return ok(`Aiguille ${aig} ${e.aiguilles[aig] === 'normale' ? 'en position normale' : 'renversée'}`);
       },
@@ -968,7 +1112,7 @@
   function occupation(etat, voie) {
     const g = geometrie(etat, voie);
     const o = { annonce: false, approche: false, eap: false, zoneA: false, zoneB: false, saatAnnonce: '', saatCarre: '' };
-    etat.trains.filter((t) => t.voie === voie && !t.attenteDepart).forEach((t) => {
+    etat.trains.filter((t) => t.voie === voie && !t.attenteDepart && !t.manoeuvre).forEach((t) => {
       const tete = t.s;
       const queue = t.s - t.longueur;
       const recouvre = (debut, fin) => tete > debut && queue < fin;
@@ -979,6 +1123,11 @@
       if (recouvre(g.aiguille, g.finZoneB)) o.zoneB = true;
       // Le numéro reste sur la case du carré de l'entrée en ZAP jusqu'à la libération de la dernière zone
       if (tete >= g.debutZap && queue < g.finZoneB) o.saatCarre = t.numero;
+    });
+    // Mouvements de manœuvre : zones traversées, sur les deux voies
+    etat.trains.forEach((t) => {
+      const z = t.manoeuvre && t.manoeuvre.zones[voie];
+      if (z) z.forEach((nom) => { o[nom] = true; });
     });
     // Enclenchement d'approche : mémorisé par le moteur (voir majPointE)
     o.eap = !!(etat.pointE && etat.pointE.eap[voie]);
@@ -1000,8 +1149,12 @@
     else if (x < g.aiguille) libelle = `sur ${za}`;
     else if (x < g.finZoneB) libelle = `sur ${zb}`;
     else libelle = `en ligne, de Bravo vers ${p.aval}`;
+    if (t.manoeuvre) libelle = 'en manœuvre en gare';
+    else if (t.gare && t.v === 0) libelle = `arrêté en gare sur ${t.gare}`;
     return {
       libelle,
+      gare: t.manoeuvre ? null : t.gare || null,
+      manoeuvre: !!t.manoeuvre,
       devantSignal: t.v === 0 && !t.arrete && x >= g.debutZap && x < g.signal,
       aspect: x < g.signal ? aspect(etat.voies[t.voie]) : null,
       ordres: t.ordres || [],

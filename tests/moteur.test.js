@@ -551,6 +551,68 @@ essai('dérangement terrain : sémaphore fermé sur le terrain, ouvert au TCO', 
   assert.strictEqual(Moteur.position(m.lire(), train(m)).aspect, 'semaphore');
 });
 
+// Point E préparé pour la communication E–F (Au E, Vcm, clés, serrures, aiguilles renversées)
+function renverserEF(m) {
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  ['E', 'F'].forEach((aig, i) => {
+    assert.ok(m.agir({ type: 'B_VCM', numero: i + 1 }).ok);
+    assert.ok(m.agir({ type: 'B_CLE', cle: aig }).ok);
+    assert.ok(m.agir({ type: 'B_SERRURE', aiguille: aig }).ok);
+    assert.ok(m.agir({ type: 'B_LEVIER', aiguille: aig }).ok);
+  });
+}
+
+essai('manœuvre : terminus voie 1, avance sur z3, rebrousse par E et F, repart vers Alfa', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'ACCELERATION', facteur: 20 });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', origine: 'Alfa', destination: 'Bravo', numero: '12', longueur: 300 });
+  jusqua(m, () => train(m).terminus);
+  assert.strictEqual(train(m).gare, 'z1');
+  // Rebrousser directement depuis z1 : refusé, il faut d'abord dégager E
+  assert.ok(!m.agir({ type: 'TRAIN_MANOEUVRE', id: train(m).id, mouvement: 'rebrousser' }).ok);
+  assert.ok(m.agir({ type: 'TRAIN_MANOEUVRE', id: train(m).id, mouvement: 'avancer' }).ok);
+  assert.ok(occ(m).zoneA && occ(m).zoneB);
+  jusqua(m, () => !train(m).manoeuvre);
+  assert.strictEqual(train(m).gare, 'z3');
+  // Aiguilles normales : le conducteur refuse de partir et appelle
+  const r = m.agir({ type: 'TRAIN_MANOEUVRE', id: train(m).id, mouvement: 'rebrousser' });
+  assert.ok(r.alerte && /aiguille E mal orientée/.test(r.message) && !train(m).manoeuvre);
+  renverserEF(m);
+  assert.ok(m.agir({ type: 'TRAIN_MANOEUVRE', id: train(m).id, mouvement: 'rebrousser' }).ok);
+  assert.ok(Moteur.occupation(m.lire(), 'V2').zoneA);
+  jusqua(m, () => !train(m).manoeuvre);
+  assert.ok(train(m).voie === 'V2' && train(m).gare === 'z4');
+  assert.ok(m.agir({ type: 'TRAIN_DEPART', id: train(m).id }).ok);
+  assert.strictEqual(train(m).destination, 'Alfa');
+  jusqua(m, () => m.lire().trains.length === 0);
+});
+
+essai('manœuvre : aiguille prise en talon mal orientée → talonnée', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'TRAIN_CREER', origine: 'Bravo', destination: 'Alfa', numero: '20', longueur: 50 });
+  assert.strictEqual(train(m).gare, 'z4');
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  m.agir({ type: 'B_VCM', numero: 2 }); m.agir({ type: 'B_CLE', cle: 'F' });
+  m.agir({ type: 'B_SERRURE', aiguille: 'F' }); m.agir({ type: 'B_LEVIER', aiguille: 'F' });
+  const r = m.agir({ type: 'TRAIN_MANOEUVRE', id: train(m).id, mouvement: 'rebrousser' });
+  assert.ok(r.alerte && /aiguille E talonnée/.test(r.message));
+  assert.ok(m.lire().pointE.talonnees.E);
+});
+
+essai('un train s\'arrête derrière celui qui le précède', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'ACCELERATION', facteur: 20 });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', origine: 'Alfa', destination: 'Bravo', numero: '1', longueur: 300 });
+  jusqua(m, () => m.lire().trains[0].terminus);
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '3', longueur: 50, vitesse: 30 });
+  m.agir({ type: 'TRAIN_FRANCHIR', id: m.lire().trains[1].id });
+  jusqua(m, () => m.lire().trains[1].v === 0 && m.lire().trains[1].s > 5000);
+  const [a, b] = m.lire().trains;
+  assert.ok(b.s < a.s - a.longueur && !b.urgence);
+});
+
 essai('réinitialisation', () => {
   const m = Moteur.creer();
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });

@@ -149,6 +149,8 @@
   // Les cartes sont reconstruites quand la situation d'un train change ; PK et vitesse sont mis à jour en continu
   function situation(t, p) {
     if (t.attenteDepart) return [`Attend à ${t.origine} la voie libre de Bravo`, true];
+    if (p.manoeuvre) return [`${t.voie}, en manœuvre en gare de Bravo`, true];
+    if (p.gare) return [`${t.voie}, arrêté en gare de Bravo sur ${p.gare}${t.terminus && p.gare !== 'z3' ? ' (terminus)' : ''}`, false];
     if (t.terminus) return ['Terminus, à quai à Bravo', false];
     if (t.aQuai) return ['À quai à Bravo, attend le départ', true];
     if (t.arrete && t.urgence) return [`${t.voie}, ${p.libelle} — arrêt d'urgence après franchissement du signal fermé`, true];
@@ -184,7 +186,18 @@
           b.addEventListener('click', () => agir({ type, id: t.id }));
           boutons.append(b);
         };
-        if (!t.terminus && !t.attenteDepart) {
+        if (p.gare) {
+          // En gare : mouvements de manœuvre puis départ (le formateur joue le conducteur)
+          const manoeuvre = (libelle, mouvement) => {
+            const b = creer('button', '', libelle);
+            b.addEventListener('click', () => agir({ type: 'TRAIN_MANOEUVRE', id: t.id, mouvement }));
+            boutons.append(b);
+          };
+          if (p.gare === 'z1') manoeuvre('Avancer jusqu\'à z3', 'avancer');
+          if (p.gare === 'z3') manoeuvre('Rebrousser vers la voie 2 (E puis F)', 'rebrousser');
+          if (p.gare === 'z4') manoeuvre('Rebrousser vers la voie 1 (F puis E)', 'rebrousser');
+          bouton(`Départ vers ${t.voie === 'V1' ? 'Charlie' : 'Alfa'}`, 'TRAIN_DEPART');
+        } else if (!t.terminus && !t.attenteDepart && !p.manoeuvre) {
           if (t.arrete) bouton(t.aQuai ? 'Donner le départ' : 'Repartir', 'TRAIN_REPARTIR');
           else bouton('Arrêter', 'TRAIN_ARRETER');
         }
@@ -259,6 +272,10 @@
   incident('Pédale intempestive V1', { type: 'TRAIN_PEDALE', voie: 'V1' });
   incident('Pédale intempestive V2', { type: 'TRAIN_PEDALE', voie: 'V2' });
   // Signal fermé sur le terrain alors que le TCO le montre ouvert : le conducteur le signale
+  const reparations = {
+    E: incident('', { type: 'AIGUILLE_REPAREE', aiguille: 'E' }),
+    F: incident('', { type: 'AIGUILLE_REPAREE', aiguille: 'F' }),
+  };
   const terrains = [['V1', 'carre'], ['V1', 'sema'], ['V2', 'carre'], ['V2', 'sema']]
     .map(([voie, signal]) => [voie, signal, incident('', { type: 'TERRAIN', voie, signal })]);
   const carres = {
@@ -314,8 +331,9 @@
       ['Clé F', pe.cles.F === 'vcm' ? 'dans le Vcm 2' : "dans la serrure de l'aiguille", pe.cles.F !== 'vcm'],
       ['Serrure E', pe.serrures.E ? 'verrouillée' : 'déverrouillée', !pe.serrures.E],
       ['Serrure F', pe.serrures.F ? 'verrouillée' : 'déverrouillée', !pe.serrures.F],
-      ['Aiguille E (terrain)', pe.aiguilles.E === 'normale' ? 'normale' : 'RENVERSÉE', pe.aiguilles.E !== 'normale'],
-      ['Aiguille F (terrain)', pe.aiguilles.F === 'normale' ? 'normale' : 'RENVERSÉE', pe.aiguilles.F !== 'normale'],
+      ...['E', 'F'].map((aig) => [`Aiguille ${aig} (terrain)`,
+        `${pe.aiguilles[aig] === 'normale' ? 'normale' : 'RENVERSÉE'}${pe.talonnees && pe.talonnees[aig] ? ' · TALONNÉE' : ''}`,
+        pe.aiguilles[aig] !== 'normale' || (pe.talonnees && pe.talonnees[aig])]),
     ];
     $('installations').innerHTML = lignes.map(([n, v, marque]) => `<div class="inst${marque ? ' marque' : ''}"><span>${n}</span><b>${v}</b></div>`).join('');
     const liste = hist.filter((x) => filtreHistorique === 'tout' || (x.qui === 'Bravo' && (filtreHistorique === 'bravo' || !x.ok || x.alerte)));
@@ -339,6 +357,11 @@
     if (document.activeElement !== champRedemarrage) champRedemarrage.value = etat.redemarrage;
     boutonsAcceleration.forEach(([facteur, b]) => b.classList.toggle('actif', etat.acceleration === facteur));
     $('schema').innerHTML = Schema.svg(etat, { trains: true });
+    ['E', 'F'].forEach((aig) => {
+      const tal = etat.pointE && etat.pointE.talonnees && etat.pointE.talonnees[aig];
+      reparations[aig].hidden = !tal;
+      reparations[aig].textContent = `Remettre en état l'aiguille ${aig} (talonnée)`;
+    });
     terrains.forEach(([voie, signal, b]) => {
       const nom = signal === 'carre' ? `Carré C${voie[1]}` : `Sémaphore S${voie[1]}`;
       const actif = etat.voies[voie].terrain && etat.voies[voie].terrain[signal];
