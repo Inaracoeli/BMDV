@@ -73,7 +73,7 @@ const Liaison = (function () {
       envoyer: (m) => { if (pret) canal.send({ type: 'broadcast', event: 'm', payload: m }); },
       recevoir: (f) => { recepteur = f; },
       pret: () => pret,
-      fermer: () => { pret = false; client.removeChannel(canal); },
+      fermer: () => { pret = false; try { client.removeChannel(canal); } catch (e) { /* canal déjà fermé */ } },
     };
   }
 
@@ -83,6 +83,7 @@ const Liaison = (function () {
     let distant = null;
     let code = null;
     let formateurVu = 0;
+    let contact = false; // un écran formateur s'est manifesté depuis la saisie du code
 
     const envoyer = (t, resultat) => {
       t.dernierEnvoi = Date.now();
@@ -90,6 +91,7 @@ const Liaison = (function () {
     };
     const ecouter = (t) => t.canal.recevoir((m) => {
       if (t === distant) formateurVu = Date.now();
+      contact = true;
       if (m.t === 'action') moteur.agir(m.action);
       if (m.t === 'bonjour') envoyer(t, null);
     });
@@ -103,6 +105,7 @@ const Liaison = (function () {
       distant = null;
       code = c;
       formateurVu = 0;
+      contact = false;
       ecrireStockage(CLE_CODE_TCO, c);
       const canal = canalDistant(c);
       if (canal) {
@@ -125,6 +128,8 @@ const Liaison = (function () {
     return {
       relier,
       code: () => (code ? formater(code) : null),
+      // Vrai dès qu'un écran formateur a répondu : le TCO peut alors être affiché
+      contact: () => contact,
       // 'sans-code' | 'indisponible' (pas de réseau) | 'connexion' | 'attente' (pas de formateur) | 'relie'
       statut() {
         if (!code) return 'sans-code';
