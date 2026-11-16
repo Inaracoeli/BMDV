@@ -85,14 +85,12 @@ const TCO = (function () {
     const cond = Moteur.conditions(etat);
     basculer('E_V_AUE', !cond.aueDonnee);
     const pe = etat.pointE;
-    [['E', 'E_B_CLE', 1], ['F', 'E_B_CLF', 2]].forEach(([aig, idCle, n]) => {
+    [['E', 'E_B_CLE'], ['F', 'E_B_CLF']].forEach(([aig, idCle]) => {
       el(idCle).dataset.present = pe.cles[aig] === 'vcm' ? '1' : '0';
-      el(idCle).dataset.libre = pe.cles[aig] === 'vcm' && etat.vcm[n] === 'F' ? '1' : '0';
       const ser = el(`E_B_SER${aig}`);
       ser.dataset.cle = pe.cles[aig] === 'serrure' ? '1' : '0';
       ser.dataset.verrou = pe.serrures[aig] ? '1' : '0';
       el(`E_B_LEV${aig}`).dataset.pos = pe.aiguilles[aig];
-      el(`T_AIG_${aig}`).dataset.pos = pe.aiguilles[aig];
     });
     el('CONS_C_GARE').dataset.pos = etat.gare;
     allumer('CONS_C_GARE', etat.gare === 'HS' && 'blanc');
@@ -207,9 +205,8 @@ const TCO = (function () {
     document.addEventListener('pointerdown', Sonnerie.deverrouiller, { once: true });
     moteur.abonner((etat, resultat, action) => {
       afficher(etat);
-      if (action && action.type === 'B_GARE' && resultat) toast(resultat.message, resultat.alerte ? 9000 : 4500);
-      // Manœuvre refusée par les enclenchements : le motif s'affiche
-      if (action && resultat && !resultat.ok && /^B_(VCM|CLE|SERRURE|LEVIER)$/.test(action.type)) toast(resultat.message, 6000);
+      // Aucun message sur le TCO : l'élève constate sur ses appareils (et sur le terrain).
+      // Le détail (refus, motifs, alertes) est sur le tableau de bord du formateur.
     });
   }
 

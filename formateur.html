@@ -11,7 +11,7 @@
 <!--
   Écran formateur, pensé pour un téléphone tenu à la verticale.
   Il ne contient pas le moteur : il affiche l'état reçu du TCO et lui
-  envoie des actions (js/liaison.js). Trois onglets : Postes, Trains, Dérangements.
+  envoie des actions (js/liaison.js). Onglets : Postes, Trains, Bord (tableau de bord), Dérangements.
 -->
 
 <header>
@@ -58,6 +58,23 @@
     </details>
   </section>
 
+  <section id="onglet-bord">
+    <div class="carte">
+      <h2>Bravo <span id="bilan-bravo" class="bilan"></span></h2>
+      <p class="aide">État réel des installations, y compris ce que l'élève doit vérifier sur le terrain.</p>
+      <div id="installations"></div>
+    </div>
+    <div class="carte">
+      <h2>Historique de la séance</h2>
+      <div id="filtres-historique" class="segmente">
+        <button type="button" data-filtre="tout" class="actif">Tout</button>
+        <button type="button" data-filtre="bravo">Bravo</button>
+        <button type="button" data-filtre="refus">Refusés</button>
+      </div>
+      <ol id="historique"></ol>
+    </div>
+  </section>
+
   <section id="onglet-derangements">
     <div class="carte">
       <h2>Enclenchements</h2>
@@ -79,6 +96,7 @@
 <nav>
   <button data-onglet="postes" class="actif">Postes</button>
   <button data-onglet="trains">Trains <span id="nb-trains"></span></button>
+  <button data-onglet="bord">Bord <span id="nb-refus"></span></button>
   <button data-onglet="derangements">Dérangements</button>
 </nav>
 

@@ -342,6 +342,18 @@ essai('point E : Au E refusée tant que z1 ou z2 est occupée', () => {
   assert.ok(/Au E donnée/.test(m.agir({ type: 'B_VCM', numero: 1 }).message));
 });
 
+essai('historique de séance : manœuvres de Bravo effectuées et refusées, avec le motif', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_VCM', numero: 1 });
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  m.agir({ type: 'B_VCM', numero: 1 });
+  const h = m.lire().historique.filter((x) => x.qui === 'Bravo');
+  assert.strictEqual(h.length, 3);
+  assert.ok(!h[0].ok && /Au E donnée/.test(h[0].message) && h[2].ok);
+  m.agir({ type: 'AMONT_ANNONCE', voie: 'V2' });
+  assert.strictEqual(m.lire().historique.slice(-1)[0].qui, 'Charlie');
+});
+
 essai('tableau d\'enclenchement modifiable, conservé à la réinitialisation', () => {
   const m = Moteur.creer();
   assert.ok(m.agir({ type: 'TABLEAU_CASE', ligne: 'vcm1F', colonne: 'aueDonnee', valeur: null }).ok);
@@ -486,7 +498,10 @@ essai('réinitialisation', () => {
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
   m.agir({ type: 'TRAIN_CREER', voie: 'V1' });
   m.agir({ type: 'REINITIALISER' });
-  assert.deepStrictEqual(m.lire(), Moteur.etatInitial());
+  const { historique, ...reste } = m.lire();
+  const { historique: h0, ...attendu } = Moteur.etatInitial();
+  assert.deepStrictEqual(reste, attendu);
+  assert.strictEqual(historique.length, 1); // seule la réinitialisation est notée
 });
 
 console.log('Tous les tests passent.');

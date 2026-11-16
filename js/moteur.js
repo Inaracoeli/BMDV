@@ -145,6 +145,8 @@
         aiguilles: { E: 'normale', F: 'normale' }, // 'normale' ou 'renversee'
       },
       tableau: JSON.parse(JSON.stringify(TABLEAU_DEFAUT)),
+      // Historique de la séance pour le tableau de bord du formateur (le plus récent en dernier)
+      historique: [],
       gare: 'ES',         // commutateur gare : ES en service, HS hors service (gare temporaire, IN1508)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
@@ -236,8 +238,9 @@
     serrureEFermer: { aigENormale: true },
     serrureFOuvrir: { cleFVcm: false },
     serrureFFermer: { aigFNormale: true },
-    levierE: { serrureEVerrouillee: false, z1Libre: true, z3Libre: true },
-    levierF: { serrureFVerrouillee: false, z2Libre: true, z4Libre: true },
+    // Seules z1 et z2 protègent les aiguilles : un train arrêté sur z3 / z4 permet de manœuvrer
+    levierE: { serrureEVerrouillee: false, z1Libre: true },
+    levierF: { serrureFVerrouillee: false, z2Libre: true },
   };
   const LIBELLE_CONDITION = Object.fromEntries(CONDITIONS.map(([c, l]) => [c, l]));
 
@@ -298,6 +301,27 @@
       });
     }
     majCarres();
+
+    // Historique : manœuvres de Bravo (effectuées ou refusées, avec le motif),
+    // actions d'Alfa, de Charlie et du formateur, événements des trains
+    const HISTORIQUE_MAX = 150;
+    function acteur(type) {
+      if (/^B_/.test(type)) return 'Bravo';
+      if (/^AMONT_|^AVAL_/.test(type)) return 'Alfa / Charlie';
+      if (type === 'TEMPS') return 'Ligne';
+      return 'Formateur';
+    }
+    function noter(action, resultat) {
+      if (!action || !resultat || !resultat.message) return;
+      if (action.type === 'TEMPS' && !resultat.message) return;
+      const qui = action.type === 'AMONT_ANNONCE' || action.type === 'AMONT_ARRET_SONNERIE'
+        ? POSTES[action.voie] && POSTES[action.voie].amont
+        : /^AVAL_/.test(action.type) ? POSTES[action.voie] && POSTES[action.voie].aval : acteur(action.type);
+      const messages = action.type === 'TEMPS' ? resultat.message.split(' · ') : [resultat.message];
+      const h = Date.now();
+      messages.forEach((m) => etat.historique.push({ h, qui: qui || acteur(action.type), type: action.type, ok: !!resultat.ok, message: m }));
+      if (etat.historique.length > HISTORIQUE_MAX) etat.historique.splice(0, etat.historique.length - HISTORIQUE_MAX);
+    }
 
     const actions = {
       // ---------- Poste amont (joué par le formateur) ----------
@@ -815,6 +839,7 @@
         const tableau = etat.tableau; // le tableau du formateur est conservé
         etat = etatInitial();
         etat.tableau = tableau;
+        etat.historique = [];
         return ok('Simulateur réinitialisé');
       },
     };
@@ -831,6 +856,7 @@
       }
       majCarres();
       majPointE();
+      noter(action, resultat);
       abonnes.forEach((f) => f(etat, resultat, action));
       return resultat;
     }

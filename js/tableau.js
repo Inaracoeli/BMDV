@@ -23,8 +23,8 @@ const Tableau = (function () {
       <p class="legende"><span class="v oui">✓</span> exige la condition
         <span class="v non">✗</span> exige son contraire
         <span class="v"></span> sans effet
-        <span class="pastille vrai"></span> condition réalisée maintenant
-        <span class="etat-ligne permis">permis</span> <span class="etat-ligne refuse">refusé</span> état actuel de la ligne</p>
+        <span class="live"><span class="pastille vrai"></span> condition réalisée maintenant
+        <span class="etat-ligne permis">permis</span> <span class="etat-ligne refuse">refusé</span> état actuel (mode Modifier, pour le formateur)</span></p>
       <span class="espace"></span>
       <button type="button" class="modifier">Modifier</button>
       <button type="button" class="defaut" hidden>Tableau par défaut</button>
@@ -42,7 +42,7 @@ const Tableau = (function () {
   function construire() {
     const groupes = [];
     Moteur.CONDITIONS.forEach(([, , g]) => { if (groupes[groupes.length - 1]?.nom !== g) groupes.push({ nom: g, n: 0 }); groupes[groupes.length - 1].n++; });
-    const ligneGroupe = `<tr><th class="coin" rowspan="2">Pour que… <span>il faut que…</span></th>${groupes.map((g) => `<th class="groupe" colspan="${g.n}">${g.nom}</th>`).join('')}<th class="coin" rowspan="2">Maintenant</th></tr>`;
+    const ligneGroupe = `<tr><th class="coin" rowspan="2">Pour que… <span>il faut que…</span></th>${groupes.map((g) => `<th class="groupe" colspan="${g.n}">${g.nom}</th>`).join('')}<th class="coin etat-ligne" rowspan="2">Maintenant</th></tr>`;
     const ligneCond = `<tr>${Moteur.CONDITIONS.map(([c, l]) => `<th class="cond" data-col="${c}"><div><span class="pastille"></span>${l}</div></th>`).join('')}</tr>`;
     let genrePrec = null;
     const corpsTable = Moteur.LIGNES_TABLEAU.map(([l, libelle, genre]) => {
@@ -73,7 +73,7 @@ const Tableau = (function () {
       const etatLigne = Moteur.LIGNES_TABLEAU.find(([l]) => l === tr.dataset.ligne)[2] === 'etat';
       cell.textContent = etatLigne ? (permis ? 'oui' : 'non') : (permis ? 'permis' : 'refusé');
       cell.className = `etat-ligne ${permis ? 'permis' : 'refuse'}`;
-      cell.title = permis ? '' : `Manque : ${m.join(', ')}`;
+      cell.title = permis || !edition ? '' : `Manque : ${m.join(', ')}`;
     });
     dialogue.classList.toggle('edition', edition);
   }
