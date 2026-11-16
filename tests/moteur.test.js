@@ -378,12 +378,45 @@ essai('gare : cessation signalée si les conditions ne sont pas réunies, repris
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
   const r = m.agir({ type: 'B_GARE', position: 'HS' });
   assert.ok(r.alerte && /voie libre non rendue à Alfa/.test(r.message) && /sémaphore fermé/.test(r.message));
-  m.agir({ type: 'AMONT_ANNONCE', voie: 'V2' }); // Charlie annonce directement à Alfa
   const r2 = m.agir({ type: 'B_GARE', position: 'ES' });
-  assert.ok(r2.alerte && /V2 : canton Charlie–Alfa non libre/.test(r2.message));
+  assert.ok(!r2.alerte && m.lire().gare === 'ES');
   const v1 = m.lire().voies.V1;
-  assert.ok(!v1.annonceRecue && !m.lire().voies.V2.directe && m.lire().gare === 'ES');
+  assert.ok(!v1.annonceRecue && !v1.annonceEmise);
   assert.ok(m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' }).ok);
+});
+
+essai('reprise en canton occupé : train en détresse entre Bravo et Charlie', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'B_GARE', position: 'HS' });
+  m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '7', longueur: 50 });
+  jusqua(m, () => occ(m).zoneB);
+  m.agir({ type: 'TRAIN_ARRETER', id: m.lire().trains[0].id }); // détresse
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ferme' });
+  const r = m.agir({ type: 'B_GARE', position: 'ES' });
+  assert.ok(r.alerte && /canton occupé/.test(r.message) && /Bravo–Charlie considéré occupé \(train 7\)/.test(r.message));
+  const v = m.lire().voies.V1;
+  assert.ok(v.annonceEmise && !v.annonceRecue && !v.sema.ouvert && v.sema.bloque);
+  // Le canton Alfa–Bravo est libre : Alfa peut annoncer le train suivant à Bravo
+  assert.ok(/à Bravo/.test(m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' }).message));
+  // Secours terminé : le train repart, arrive à Charlie qui rend voie libre à Bravo
+  m.agir({ type: 'TRAIN_REPARTIR', id: m.lire().trains[0].id });
+  jusqua(m, () => m.lire().trains.length === 0);
+  assert.ok(/à Bravo/.test(m.agir({ type: 'AVAL_REDDITION', voie: 'V1' }).message));
+  assert.ok(!m.lire().voies.V1.sema.bloque);
+});
+
+essai('reprise en canton occupé : train encore entre Alfa et Bravo', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'B_GARE', position: 'HS' });
+  m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '9', longueur: 300 });
+  pendant(m, 20000);
+  const r = m.agir({ type: 'B_GARE', position: 'ES' });
+  assert.ok(r.alerte && /Alfa–Bravo occupé \(train 9\)/.test(r.message));
+  const v = m.lire().voies.V1;
+  assert.ok(v.annonceRecue && !v.annonceEmise);
 });
 
 essai('réinitialisation', () => {

@@ -143,6 +143,36 @@
     },
   ];
 
+  // Reprise en canton occupé (fiche 7) : train en détresse entre Bravo et Charlie, voie 1
+  const CANTON_OCCUPE = [
+    {
+      qui: 'A', titre: 'Alfa et Charlie autorisent la reprise', gare: 'HS', sema: 'ouvert', fleche: 'AC>B', train: 0.78, detresse: true,
+      depeche: 'A à B — Canton AC occupé par train n° 7 en détresse au km 115. Dernier train expédié vers C avant le train en détresse est train n° 5. Pouvez reprendre le service de la circulation.',
+      actions: [
+        'À utiliser quand l\'ouverture de Bravo est nécessaire pour le secours ou le dégagement de la voie.',
+        'Charlie répond : « C à B — Dernier train reçu de A est train n° 5. Canton CA libre. Pouvez reprendre le service de la circulation. »',
+      ],
+      effets: [],
+    },
+    {
+      qui: 'B', titre: 'Bravo reprend en considérant BC occupé', gare: 'ES', sema: 'ferme', train: 0.78, detresse: true,
+      actions: [
+        'Vérifier que le dernier train reçu par Charlie est bien celui indiqué par Alfa, puis reprendre comme d\'habitude (commutateur sur <b>ES</b>, dépêche, registre).',
+        'Le canton Bravo–Charlie est <b>occupé</b> : fermer le sémaphore qui y donne accès. Le canton Alfa–Bravo est libre.',
+        'Tant que le secours n\'est pas terminé, aucune autre opération de sécurité sur cette voie avec Alfa et Charlie.',
+      ],
+      effets: [['rouge', 'Annonce côté Charlie'], ['rouge', 'Voyant du sémaphore (bloqué)']],
+    },
+    {
+      qui: 'C', titre: 'Fin du secours', gare: 'ES', sema: 'ferme',
+      depeche: 'C à A et B — Train n° 7 arrivé complet à la gare de C avec engin moteur de secours.',
+      actions: [
+        'La gare où le train est dégagé avise les deux autres. Une fois les opérations terminées (voie libre rendue par Charlie), les cantons AB et BC sont libres.',
+      ],
+      effets: [['blanc', 'Voie libre côté Charlie'], ['eteint', 'Sémaphore débloqué']],
+    },
+  ];
+
   function schemaGare(e) {
     const posteB = e.gare === 'HS' ? 'poste hs' : 'poste';
     const cadre = (lettre, px, classe) => `
@@ -164,7 +194,9 @@
         <text x="14" y="58" class="nvoie">1</text><text x="14" y="84" class="nvoie">2</text>
         <circle cx="212" cy="46" r="5.5" class="feu ${e.sema}"/>
         <circle cx="188" cy="90" r="5.5" class="feu ${e.sema}"/>
-        ${x != null ? `<rect x="${x - 20}" y="46" width="40" height="18" rx="5" class="train"/>
+        ${x != null && e.detresse ? `<rect x="${x - 20}" y="46" width="40" height="18" rx="5" class="train detresse"/>
+          <text x="${x}" y="76" class="etiquette">détresse</text>` : ''}
+        ${x != null && !e.detresse ? `<rect x="${x - 20}" y="46" width="40" height="18" rx="5" class="train"/>
           <path d="M${x + 24} 55 l8 0 m-4 -4 l4 4 l-4 4" class="fleche"/>` : ''}
       </svg>`;
   }
@@ -200,10 +232,14 @@
     ${etapesHtml(CESSATION, schemaGare)}
     <h3>Reprise <small>HS → ES</small></h3>
     ${etapesHtml(REPRISE, schemaGare)}
-    <p class="note"><b>Cas particuliers :</b> block en dérangement à la reprise → cantonnement téléphonique substitué, inscrit au registre ;
-      reprise sur une seule voie possible si chaque sens a son propre commutateur ; reprise alors qu'un canton est occupé → procédure de secours de la consigne.</p>
+    <h3>Reprise en canton occupé <small>exemple : train 7 en détresse sur la voie 1, entre Bravo et Charlie</small></h3>
+    ${etapesHtml(CANTON_OCCUPE, schemaGare)}
+    <p class="note">Si le train est encore entre Alfa et Bravo, c'est le canton Alfa–Bravo qui est occupé : Bravo considère le train comme annoncé.</p>
+    <p class="note"><b>Autres cas :</b> block en dérangement à la reprise → cantonnement téléphonique substitué, inscrit au registre ;
+      reprise sur une seule voie possible si chaque sens a son propre commutateur.</p>
     <p class="note"><b>Dans le simulateur :</b> le commutateur ne s'oppose pas à une manœuvre irrégulière (annonce en attente, sémaphore fermé…) :
-      il l'exécute et affiche une alerte, comme dans la réalité où la vérification revient à l'agent.</p>
+      il l'exécute et affiche une alerte, comme dans la réalité où la vérification revient à l'agent. À la reprise, un train encore en ligne
+      est reporté automatiquement sur le block de Bravo (reprise en canton occupé). Pour simuler la détresse : arrêter le train depuis l'onglet Trains.</p>
     <p class="note">Rappel rédigé pour le simulateur : la consigne de la gare temporaire fait foi.</p>`;
 
   const dialogue = document.createElement('dialog');

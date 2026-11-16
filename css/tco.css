@@ -284,3 +284,4 @@ table.page td:not(.heure):not(.obs) { color: #12317a; }
 #guide .schema .etiquette { font: bold 10px Arial, sans-serif; text-anchor: middle; fill: #55595e; }
 #guide .schema .nvoie { font: 10px Arial, sans-serif; text-anchor: middle; fill: #8a8d92; }
 #guide .schema .depeche { fill: none; stroke: #12317a; stroke-width: 1.6; stroke-dasharray: 4 3; }
+#guide .schema .train.detresse { fill: var(--rouge); }

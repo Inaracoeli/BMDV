@@ -545,25 +545,50 @@
             if (v.annonceRecue) alertes.push(`${voie} : voie libre non rendue à ${POSTES[voie].amont}`);
             if (v.annonceEmise) alertes.push(`${voie} : voie libre non reçue de ${POSTES[voie].aval}`);
             if (!v.sema.ouvert) alertes.push(`${voie} : sémaphore fermé`);
-          } else if (v.directe) {
-            alertes.push(`${voie} : canton ${POSTES[voie].amont}–${POSTES[voie].aval} non libre`);
           }
         });
-        if (etat.trains.some((t) => !t.attenteDepart && !t.terminus)) alertes.push('trains en ligne');
+        if (nouvelle === 'HS' && etat.trains.some((t) => !t.attenteDepart && !t.terminus)) alertes.push('trains en ligne');
         etat.gare = nouvelle;
-        Object.values(etat.voies).forEach((v) => {
+        const occupes = [];
+        Object.entries(etat.voies).forEach(([voie, v]) => {
           v.sonnerieAnnonce = false;
           v.sonnerieReddition = false;
-          if (nouvelle === 'ES') {
-            // Reprise : le block de Bravo repart d'un état propre, cantons supposés libres
-            v.directe = false;
-            v.annonceRecue = false;
-            v.annonceEmise = false;
-            v.arriveeSansAnnonce = false;
-            v.sema.bloque = false;
-            v.sema.ouvert = v.sema.manette === 'ouvert';
+          if (nouvelle !== 'ES') return;
+          // Reprise : le block de Bravo repart d'un état propre, cantons libres...
+          const enLigne = etat.trains.filter((t) => t.voie === voie && !t.attenteDepart && !t.terminus && !t.aQuai);
+          const occupe = v.directe || enLigne.length > 0;
+          v.directe = false;
+          v.annonceRecue = false;
+          v.annonceEmise = false;
+          v.arriveeSansAnnonce = false;
+          v.sema.bloque = false;
+          v.sema.ouvert = v.sema.manette === 'ouvert';
+          if (!occupe) return;
+          // ... sauf reprise en canton occupé (IN1508, fiche 7) : le train encore en ligne
+          // (ou annoncé mais pas encore arrivé chez le poste aval) est reporté sur le block de Bravo.
+          const p = POSTES[voie];
+          const g = geometrie(etat, voie);
+          const apres = enLigne.filter((t) => t.s >= g.signal);
+          const avant = enLigne.filter((t) => t.s < g.signal);
+          // Canton Bravo → aval occupé : train passé à Bravo, ou arrivé sans voie libre rendue
+          if (apres.length || (enLigne.length === 0 && v.arrivesAval > 0)) {
+            v.annonceEmise = true;
+            v.sema.ouvert = false;
+            v.sema.bloque = true;
+            occupes.push(`${voie} : canton Bravo–${p.aval} considéré occupé${apres.length ? ` (train ${apres.map((t) => t.numero).join(', ')})` : ''}, sémaphore fermé`);
+          }
+          // Canton amont → Bravo occupé : train pas encore arrivé à Bravo, ou annoncé et pas encore parti
+          if (avant.length || (enLigne.length === 0 && v.arrivesAval === 0)) {
+            v.annonceRecue = true;
+            occupes.push(`${voie} : canton ${p.amont}–Bravo occupé${avant.length ? ` (train ${avant.map((t) => t.numero).join(', ')})` : ''}, annonce reportée à Bravo`);
           }
         });
+        if (occupes.length) {
+          return {
+            ok: true, alerte: true,
+            message: `Commutateur sur ES : reprise en canton occupé (fiche 7, autorisation d'Alfa et de Charlie nécessaire). ${occupes.join(' ; ')}`,
+          };
+        }
         const message = nouvelle === 'HS'
           ? 'Commutateur sur HS : gare de Bravo hors service, Alfa et Charlie travaillent directement entre eux'
           : 'Commutateur sur ES : gare de Bravo en service, block repris';
