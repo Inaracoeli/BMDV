@@ -8,8 +8,10 @@
 //   - distant : deux appareils, par la messagerie temps réel de
 //     Supabase (diffusion sur un canal propre à la séance, sans table
 //     ni compte).
-// C'est le formateur qui crée la séance : son téléphone affiche un code,
-// qu'il saisit ensuite sur le PC du TCO.
+// C'est le PC du TCO qui crée la séance : il affiche un QR code (et le code en
+// clair, en secours). Le téléphone du formateur, connecté à son compte, le scanne
+// et rejoint la séance. Le TCO n'accepte que les messages portant un jeton de
+// formateur valide, vérifié par le serveur (/api/verifier, Cloudflare Pages).
 // ==========================================================
 const Liaison = (function () {
   const CANAL = 'bmdv';
@@ -77,30 +79,52 @@ const Liaison = (function () {
     };
   }
 
-  // ---------- Côté TCO : diffuse l'état du moteur et exécute les actions reçues ----------
+  // ---------- Vérification du jeton du formateur (par le serveur) ----------
+  const authentification = () => !(window.BMDV_CONFIG && window.BMDV_CONFIG.authentification === false);
+  const verifies = new Map(); // jeton → { ok, quand }
+  const REVERIFIER_MS = 10 * 60 * 1000;
+  function verifierJeton(jeton) {
+    if (!authentification()) return Promise.resolve(true);
+    if (!jeton) return Promise.resolve(false);
+    const connu = verifies.get(jeton);
+    if (connu && (connu.encours || Date.now() - connu.quand < REVERIFIER_MS)) return connu.encours || Promise.resolve(connu.ok);
+    const encours = fetch('/api/verifier', { headers: { authorization: `Bearer ${jeton}` }, cache: 'no-store' })
+      .then((r) => r.ok).catch(() => false)
+      .then((ok) => { verifies.set(jeton, { ok, quand: Date.now() }); return ok; });
+    verifies.set(jeton, { ok: false, quand: Date.now(), encours });
+    return encours;
+  }
+
+  // ---------- Côté TCO : crée la séance, diffuse l'état, exécute les actions du formateur ----------
   function heberger(moteur) {
-    const local = { canal: canalLocal(), periode: PERIODE_LOCALE_MS, dernierEnvoi: 0 };
+    const local = { canal: canalLocal(), periode: PERIODE_LOCALE_MS, dernierEnvoi: 0, local: true };
     let distant = null;
     let code = null;
     let formateurVu = 0;
-    let contact = false; // un écran formateur s'est manifesté depuis la saisie du code
+    let contact = false; // un téléphone authentifié s'est manifesté sur cette séance
+    let refus = 0;       // dernier message refusé (téléphone non connecté à son compte)
 
     const envoyer = (t, resultat) => {
       t.dernierEnvoi = Date.now();
       t.canal.envoyer({ t: 'etat', etat: moteur.lire(), resultat });
     };
-    const ecouter = (t) => t.canal.recevoir((m) => {
-      if (t === distant) formateurVu = Date.now();
+    // Le transport local (même navigateur, même PC) est de confiance ; à distance, jeton exigé
+    const ecouter = (t) => t.canal.recevoir(async (m) => {
+      if (m.t !== 'action' && m.t !== 'bonjour') return;
+      const autorise = t.local || await verifierJeton(m.jeton);
+      if (!autorise) {
+        refus = Date.now();
+        t.canal.envoyer({ t: 'refus', jeton: m.jeton || null });
+        return;
+      }
+      if (!t.local) { formateurVu = Date.now(); t.authentifie = true; }
       contact = true;
       if (m.t === 'action') moteur.agir(m.action);
       if (m.t === 'bonjour') envoyer(t, null);
     });
     ecouter(local);
 
-    // Se relier à la séance créée par le formateur ; renvoie false si le code est incorrect
-    function relier(codeSaisi) {
-      const c = normaliser(codeSaisi);
-      if (!codeValide(c)) return false;
+    function ouvrir(c) {
       if (distant) distant.canal.fermer();
       distant = null;
       code = c;
@@ -112,46 +136,47 @@ const Liaison = (function () {
         distant = { canal, periode: PERIODE_DISTANTE_MS, dernierEnvoi: 0 };
         ecouter(distant);
       }
-      return true;
     }
     const memorise = normaliser(lireStockage(CLE_CODE_TCO));
-    if (codeValide(memorise)) relier(memorise);
+    ouvrir(codeValide(memorise) ? memorise : nouveauCode());
 
     moteur.abonner((etat, resultat, action) => {
       const routine = action && action.type === 'TEMPS' && !(resultat && resultat.message);
       [local, distant].forEach((t) => {
-        if (!t || (routine && Date.now() - t.dernierEnvoi < t.periode)) return;
+        // À distance, l'état n'est diffusé qu'une fois le téléphone du formateur authentifié
+        if (!t || (!t.local && !t.authentifie)) return;
+        if (routine && Date.now() - t.dernierEnvoi < t.periode) return;
         envoyer(t, resultat);
       });
     });
 
     return {
-      relier,
-      code: () => (code ? formater(code) : null),
-      // Vrai dès qu'un écran formateur a répondu : le TCO peut alors être affiché
+      // Nouvelle séance : nouveau code, l'ancien téléphone est déconnecté
+      nouveauCode: () => ouvrir(nouveauCode()),
+      code: () => formater(code),
+      // Adresse ouverte par le QR code : l'écran formateur, code de séance dans l'ancre
+      url: () => new URL(`formateur.html#s=${code}`, location.href).href,
       contact: () => contact,
-      // 'sans-code' | 'indisponible' (pas de réseau) | 'connexion' | 'attente' (pas de formateur) | 'relie'
+      // 'indisponible' (pas de réseau) | 'connexion' | 'refus' | 'attente' (pas de formateur) | 'relie'
       statut() {
-        if (!code) return 'sans-code';
         if (!distant) return 'indisponible';
         if (!distant.canal.pret()) return 'connexion';
-        return Date.now() - formateurVu < 15000 ? 'relie' : 'attente';
+        if (Date.now() - formateurVu < 15000) return 'relie';
+        return Date.now() - refus < 5000 ? 'refus' : 'attente';
       },
     };
   }
 
   // ---------- Côté formateur : même interface que le moteur (agir, lire, abonner) ----------
-  // Le téléphone crée la séance (code mémorisé jusqu'à « Nouvelle séance »). Il écoute à la
-  // fois le canal de la séance et, s'il existe, un TCO ouvert dans le même navigateur.
-  function rejoindre() {
-    let code = normaliser(lireStockage(CLE_CODE_FORMATEUR));
-    if (!codeValide(code)) {
-      code = nouveauCode();
-      ecrireStockage(CLE_CODE_FORMATEUR, code);
-    }
+  // options : { code (séance du PC), jeton (compte du formateur), surRefus() }
+  // Il écoute le canal de la séance et, s'il existe, un TCO ouvert dans le même navigateur.
+  function rejoindre(options = {}) {
+    const code = normaliser(options.code);
+    ecrireStockage(CLE_CODE_FORMATEUR, code);
+    const jeton = options.jeton || null;
     const dansUnCadre = window.parent !== window;
     const transports = [canalLocal()];
-    if (!dansUnCadre) {
+    if (!dansUnCadre && codeValide(code)) {
       const distant = canalDistant(code);
       if (distant) transports.push(distant);
     }
@@ -160,6 +185,8 @@ const Liaison = (function () {
     let dernierSigne = 0;
     let source = null; // transport qui a livré le dernier état : les actions repartent par lui
     transports.forEach((t) => t.recevoir((m) => {
+      // Refus du TCO : seulement s'il concerne ce téléphone (même jeton)
+      if (m.t === 'refus') { if ((m.jeton || null) === jeton && options.surRefus) options.surRefus(); return; }
       if (m.t !== 'etat') return;
       etat = m.etat;
       dernierSigne = Date.now();
@@ -167,28 +194,29 @@ const Liaison = (function () {
       abonnes.forEach((f) => f(etat, m.resultat));
     }));
     const estConnecte = () => Date.now() - dernierSigne < 3500;
-    const saluer = () => transports.forEach((t) => t.envoyer({ t: 'bonjour' }));
+    const saluer = () => transports.forEach((t) => t.envoyer({ t: 'bonjour', jeton }));
     saluer();
     // Salut fréquent tant que le TCO ne répond pas, puis de temps en temps pour signaler sa présence
     let dernierSalut = Date.now();
-    setInterval(() => {
+    const minuterie = setInterval(() => {
       const ecart = estConnecte() ? 10000 : 1000;
       if (Date.now() - dernierSalut >= ecart) { dernierSalut = Date.now(); saluer(); }
     }, 500);
     return {
-      agir: (action) => { if (source) source.envoyer({ t: 'action', action }); },
+      agir: (action) => { if (source) source.envoyer({ t: 'action', action, jeton }); },
       lire: () => etat,
       abonner: (f) => { abonnes.push(f); if (etat) f(etat, null); },
       estConnecte,
       code: formater(code),
       distant: transports.length > 1,
-      // Nouvelle séance : nouveau code, à saisir de nouveau sur le PC
-      nouvelleSeance() {
-        ecrireStockage(CLE_CODE_FORMATEUR, nouveauCode());
-        location.reload();
-      },
+      quitter() { clearInterval(minuterie); transports.forEach((t) => t.fermer()); },
     };
   }
 
-  return { heberger, rejoindre, normaliser, codeValide, formater };
+  const dernierCodeFormateur = () => {
+    const c = normaliser(lireStockage(CLE_CODE_FORMATEUR));
+    return codeValide(c) ? c : null;
+  };
+
+  return { heberger, rejoindre, normaliser, codeValide, formater, dernierCodeFormateur };
 })();

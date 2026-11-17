@@ -24,20 +24,40 @@ la base de données, accessible uniquement après authentification.
 | `js/sonnerie.js` | Sons synthétisés : sonneries, gong d'annonce, clic des voyants |
 | `js/guide.js` | Guides ouverts par le bouton GUIDE : « Faire circuler un train » et « Gare temporaire (ES / HS) » |
 | `js/tableau.js` | Tableau d'enclenchement du point E (bouton TABLEAU D'ENCLENCH.) : consultation, modification, export |
+| `js/acces.js` | Écran formateur : connexion au compte, choix de la séance (QR code ou code) |
+| `functions/` | Connexion du formateur (Cloudflare Pages Functions) |
+| `js/vendor/qrcode.js` | Générateur de QR code (Kazuhiko Arase, licence MIT) |
 | `js/ordres.js` | Ordres de franchissement (bulletins C, S, MV) remplis depuis la console |
 | `js/registre.js` | Registre de cantonnement de Bravo (bouton REGISTRE) : saisie, exemples, tenue du registre, impression |
 | `tests/moteur.test.js` | Tests du moteur : `node tests/moteur.test.js` |
 
 ## Utilisation
 
-1. Ouvrir `formateur.html` sur le téléphone : il crée la séance et affiche un code (par exemple `K7Q2-M9XD-3FPA`).
-2. Ouvrir `tco.html` sur le PC de l'élève : un écran d'accueil masque le TCO. Y saisir ce code ; le TCO s'affiche dès
-   que le téléphone répond. Pour changer de séance, cliquer sur la pastille en bas à droite.
+1. Ouvrir `tco.html` sur le PC de l'élève : il crée la séance et affiche un **QR code** (et le code en clair,
+   par exemple `K7Q2-M9XD-3FPA`, en secours). Le TCO reste masqué.
+2. Scanner le QR code avec l'appareil photo du téléphone : `formateur.html` s'ouvre sur la séance. Se connecter au
+   compte formateur (une fois par téléphone, 30 jours). Le TCO s'affiche aussitôt. Sans appareil photo, ouvrir
+   `formateur.html` et saisir le code.
+3. Pour changer de séance : pastille en bas à droite du TCO (Nouveau code), ou menu ⋯ du téléphone.
+
+### Connexion du formateur (Cloudflare Pages Functions)
+
+Le téléphone est la clé de la séance : le TCO n'obéit qu'à un téléphone connecté au compte formateur. La connexion
+passe par `functions/api/connexion.js` et `functions/api/verifier.js`, déployées automatiquement par Cloudflare Pages.
+Variables d'environnement à définir dans le projet Pages (Settings → Variables and Secrets, type *Secret*) :
+
+| Variable | Contenu |
+|---|---|
+| `BMDV_EMAIL` | adresse e-mail du formateur |
+| `BMDV_MOT_DE_PASSE` | mot de passe du formateur |
+| `BMDV_SECRET` | chaîne aléatoire d'au moins 32 caractères (signature des jetons) ; la changer déconnecte tous les téléphones |
+
+En local : `node tests/serveur.mjs` (identifiants de test `formateur@exemple.fr` / `essai`).
 
 À l'ouverture d'une séance, Alfa et Charlie sont automatiques (réglable dans l'onglet Postes de l'écran formateur).
 
 Le moteur tourne sur le PC du TCO, pour que les trains continuent si le téléphone se met en veille. Le code reste
-mémorisé des deux côtés jusqu'à « Nouvelle séance » sur le téléphone.
+mémorisé sur le PC jusqu'à « Nouveau code ».
 
 La liaison passe par la messagerie temps réel de Supabase (diffusion sur un canal propre à la séance, sans table ni
 compte ; configuration dans `js/config.js`, bibliothèque chargée depuis jsDelivr). Sans réseau, le TCO et l'écran
