@@ -624,22 +624,33 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <!-- Écran d'accueil : masque le TCO tant que le téléphone du formateur n'a pas répondu -->
 <div id="accueil">
-  <div class="carte">
-    <div class="titre">BMDV</div>
-    <div class="sous-titre">Simulateur de block manuel de double voie · Poste B</div>
-    <label for="code-seance">Code de séance affiché sur le téléphone du formateur</label>
-    <input id="code-seance" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
-    <div class="actions">
-      <button type="button" class="annuler" hidden>Annuler</button>
-      <button type="button" class="relier">Relier</button>
+  <div class="panneau">
+    <div class="marque"><span class="nom">BMDV</span><span class="sous">Simulateur de block manuel · Poste B</span></div>
+    <div class="corps-accueil">
+      <div class="qr" id="qr" role="img" aria-label="QR code de la séance"></div>
+      <div class="explications">
+        <h1>Rejoins la séance avec ton téléphone</h1>
+        <ol class="etapes">
+          <li>Ouvre l'appareil photo du téléphone formateur</li>
+          <li>Scanne ce QR code</li>
+          <li>Connecte-toi : le poste s'ouvre aussitôt</li>
+        </ol>
+        <div class="secours">Sans appareil photo, saisis ce code sur le téléphone :
+          <b id="code-clair">····-····-····</b></div>
+        <p class="etat" role="status" aria-live="polite"></p>
+        <div class="actions">
+          <button type="button" class="annuler" hidden>Revenir au poste</button>
+          <button type="button" class="nouveau">Nouveau code</button>
+        </div>
+      </div>
     </div>
-    <p class="etat" role="status" aria-live="polite"></p>
   </div>
 </div>
 <div id="seance" data-statut="sans-code" title="Changer de séance"><span class="titre">Séance</span> <span class="code"></span> <span class="statut"></span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
+<script src="js/vendor/qrcode.js"></script>
 <script src="js/moteur.js"></script>
 <script src="js/sonnerie.js"></script>
 <script src="js/schema.js"></script>

@@ -3,8 +3,9 @@
 // Affiche l'état reçu du TCO et envoie les actions du formateur :
 // pupitres d'Alfa et de Charlie, trains, dérangements.
 // ==========================================================
-(function () {
-  const moteur = Liaison.rejoindre();
+const FormateurApp = { demarrer(moteur, acces) {
+  if (FormateurApp.demarre) return;
+  FormateurApp.demarre = true;
   const $ = (id) => document.getElementById(id);
   const creer = (balise, classe, texte) => {
     const e = document.createElement(balise);
@@ -15,22 +16,22 @@
   // Toute action passe par ici : si le TCO ne répond pas, le formateur en est averti
   const agir = (action) => {
     if (!moteur.estConnecte()) {
-      $('journal').textContent = 'TCO non connecté : action non transmise. Saisissez le code de séance sur le PC du TCO.';
+      $('journal').textContent = 'TCO non connecté : action non transmise. Vérifie que le PC affiche le poste.';
       $('journal').className = 'sans-effet';
     }
     moteur.agir(action);
   };
 
-  // ---------- Séance : le code créé par ce téléphone, à saisir sur le PC du TCO ----------
-  $('code-seance').textContent = moteur.code;
+  // Hauteur de la barre épinglée : le choix du poste se colle juste dessous
+  const majHaut = () => document.documentElement.style.setProperty('--haut-barre', `${$('barre').offsetHeight}px`);
+  if (window.ResizeObserver) new ResizeObserver(majHaut).observe($('barre'));
+  majHaut();
+
+  // ---------- Séance : code rejoint, menu ----------
   $('code-court').textContent = moteur.code;
-  // Nouvelle séance en deux appuis, pour éviter une fausse manœuvre
-  let confirmationSeance = null;
-  $('nouvelle-seance').addEventListener('click', () => {
-    if (confirmationSeance) { moteur.nouvelleSeance(); return; }
-    $('nouvelle-seance').textContent = 'Confirmer (nouveau code à saisir sur le PC)';
-    confirmationSeance = setTimeout(() => { confirmationSeance = null; $('nouvelle-seance').textContent = 'Nouvelle séance'; }, 4000);
-  });
+  $('menu').addEventListener('click', () => { $('menu-seance').hidden = !$('menu-seance').hidden; });
+  $('changer-seance').addEventListener('click', () => acces.changerSeance());
+  $('se-deconnecter').addEventListener('click', () => acces.deconnecter());
 
   // ---------- Onglets ----------
   let schemaCentre = false;
@@ -55,7 +56,7 @@
     b.type = 'button';
     b.setAttribute('aria-label', libelle);
     b.append(creer('i'));
-    b.addEventListener('click', auClic);
+    if (auClic) b.addEventListener('click', auClic);
     parent.append(b);
     return b;
   }
@@ -65,10 +66,13 @@
     parent.append(v);
     return v;
   }
+  const MAINTIEN_MS = 3000; // comme au TCO : Sonnerie reste « tenue » 3 s pour la reddition
   function pupitre(poste) {
     const emission = poste === 'Alfa' ? 'V1' : 'V2';   // ce poste annonce ses trains à Bravo
     const reception = poste === 'Alfa' ? 'V2' : 'V1';  // ce poste reçoit les trains venant de Bravo
     const p = creer('div', 'pupitre');
+    p.dataset.poste = poste;
+    if (poste !== 'Alfa') p.hidden = true;
     const plaque = creer('div', 'plaque', `POSTE ${poste.toUpperCase()}`);
     plaque.append(creer('small', '', 'BLOCK CÔTÉ BRAVO'));
     const colonnes = creer('div', 'colonnes');
@@ -81,18 +85,50 @@
     const vl = voyant(colE, 'VOIE LIBRE');
     const sonnerieE = poussoir(colE, 'SONNERIE', () => agir({ type: 'AMONT_ARRET_SONNERIE', voie: emission }));
 
+    // Réception : Reddition et Sonnerie réunies par l'accolade, à presser ensemble
     const colR = creer('div', 'colonne');
     const sensR = creer('div', 'sens', `Bravo → ${poste}`);
     colR.append(creer('div', 'voie', `VOIE ${reception[1]}`), sensR);
-    const reddition = poussoir(colR, 'REDDITION', () => agir({ type: 'AVAL_REDDITION', voie: reception }));
     const parvenu = voyant(colR, 'TRAIN PARVENU');
-    const sonnerieR = poussoir(colR, 'SONNERIE', () => agir({ type: 'AVAL_ARRET_SONNERIE', voie: reception }));
+    const paire = creer('div', 'paire');
+    paire.append(creer('div', 'accolade'));
+    const boutonsPaire = creer('div', 'boutons-paire');
+    paire.append(boutonsPaire);
+    colR.append(paire);
+    let tenueJusqua = 0;
+    let minuterieTenue = null;
+    const reddition = poussoir(boutonsPaire, 'REDDITION', null);
+    const sonnerieR = poussoir(boutonsPaire, 'SONNERIE', null);
+    const aide = creer('div', 'aide-paire', 'Appuie en même temps sur Sonnerie');
+    colR.append(aide);
+    // Appui sur Sonnerie : arrête la sonnerie et reste tenue 3 s (ou tant que le doigt reste posé)
+    sonnerieR.addEventListener('pointerdown', () => {
+      agir({ type: 'AVAL_ARRET_SONNERIE', voie: reception });
+      tenueJusqua = Date.now() + MAINTIEN_MS;
+      sonnerieR.classList.remove('tenue'); void sonnerieR.offsetWidth; sonnerieR.classList.add('tenue');
+      clearTimeout(minuterieTenue);
+      minuterieTenue = setTimeout(() => sonnerieR.classList.remove('tenue'), MAINTIEN_MS);
+    });
+    reddition.addEventListener('pointerdown', () => {
+      if (Date.now() < tenueJusqua) {
+        agir({ type: 'AVAL_REDDITION', voie: reception });
+        tenueJusqua = 0;
+        sonnerieR.classList.remove('tenue');
+        if (navigator.vibrate) navigator.vibrate(40);
+        return;
+      }
+      // Reddition seule : sans effet, l'accolade le rappelle
+      paire.classList.remove('rappel'); void paire.offsetWidth; paire.classList.add('rappel');
+      aide.classList.add('visible');
+      setTimeout(() => aide.classList.remove('visible'), 2500);
+    });
 
     // Voie 1 à gauche, voie 2 à droite, comme sur le pupitre de Bravo
     colonnes.append(...(emission === 'V1' ? [colE, colR] : [colR, colE]));
     p.append(plaque, colonnes);
     $('pupitres').append(p);
 
+    let sonnaitAvant = false;
     majPupitres.push((etat) => {
       const e = etat.voies[emission];
       const r = etat.voies[reception];
@@ -107,11 +143,24 @@
       annonce.dataset.etat = annonceEnCours ? 'rouge' : '';
       vl.dataset.etat = annonceEnCours ? '' : 'blanc';
       sonnerieE.dataset.etat = e.sonnerieAmont ? 'blanc' : '';
-      reddition.dataset.etat = (hs ? r.directe : r.annonceEmise) ? 'jaune' : '';
+      const recu = hs ? r.directe : r.annonceEmise;
+      reddition.dataset.etat = recu ? 'jaune' : '';
       parvenu.dataset.etat = r.arrivesAval > 0 ? 'jaune' : '';
       sonnerieR.dataset.etat = r.sonnerieAval ? 'blanc' : '';
+      // Pastille sur l'onglet du poste quand il attend une action du formateur
+      const sonne = !!(e.sonnerieAmont || r.sonnerieAval);
+      const enAttente = sonne || (recu && r.arrivesAval > 0 && !etat.reglages.postesAutomatiques);
+      const onglet = document.querySelector(`#choix-poste button[data-poste="${poste}"]`);
+      onglet.classList.toggle('attente', enAttente);
+      onglet.classList.toggle('sonne', sonne);
+      if (sonne && !sonnaitAvant && !etat.reglages.postesAutomatiques && navigator.vibrate) navigator.vibrate([120, 60, 120]);
+      sonnaitAvant = sonne;
     });
   }
+  document.querySelectorAll('#choix-poste button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#choix-poste button').forEach((x) => x.classList.toggle('actif', x === b));
+    document.querySelectorAll('.pupitre').forEach((x) => { x.hidden = x.dataset.poste !== b.dataset.poste; });
+  }));
   pupitre('Alfa');
   pupitre('Charlie');
   $('auto').addEventListener('change', (e) => agir({ type: 'REGLAGE', nom: 'postesAutomatiques', actif: e.target.checked }));
@@ -347,7 +396,45 @@
       || '<li class="vide">Rien pour le moment.</li>';
   }
 
+  // ---------- Alertes épinglées en haut : ce qui attend le formateur ----------
+  const allerA = (onglet, poste) => {
+    document.querySelector(`nav button[data-onglet="${onglet}"]`).click();
+    if (poste) document.querySelector(`#choix-poste button[data-poste="${poste}"]`).click();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  let signatureAlertes = '';
+  function majAlertes(etat) {
+    const liste = [];
+    const auto = etat.reglages.postesAutomatiques;
+    [['Alfa', 'V1', 'V2'], ['Charlie', 'V2', 'V1']].forEach(([poste, em, rec]) => {
+      const e = etat.voies[em];
+      const r = etat.voies[rec];
+      const hs = etat.gare === 'HS';
+      if (r.sonnerieAval) liste.push(['sonne', `${poste} : annonce reçue`, 'postes', poste]);
+      if (e.sonnerieAmont) liste.push(['sonne', `${poste} : voie libre reçue`, 'postes', poste]);
+      if (!auto && r.arrivesAval > 0 && (hs ? r.directe : r.annonceEmise)) liste.push(['action', `${poste} : rendre voie libre`, 'postes', poste]);
+    });
+    etat.trains.forEach((t) => {
+      const p = Moteur.position(etat, t);
+      if (p.devantSignal && !p.redemarre) {
+        const vu = p.aspect === 'carre' ? `C${t.voie[1]}` : `S${t.voie[1]}`;
+        liste.push(['train', `Train ${t.numero} arrêté devant ${vu}`, 'trains']);
+      }
+      if (t.urgence) liste.push(['danger', `Train ${t.numero} : arrêt d'urgence`, 'trains']);
+    });
+    const signature = JSON.stringify(liste);
+    if (signature === signatureAlertes) return;
+    signatureAlertes = signature;
+    $('alertes').replaceChildren(...liste.map(([genre, texte, onglet, poste]) => {
+      const b = creer('button', `alerte ${genre}`, texte);
+      b.type = 'button';
+      b.addEventListener('click', () => allerA(onglet, poste));
+      return b;
+    }));
+  }
+
   moteur.abonner((etat, resultat) => {
+    majAlertes(etat);
     afficherBord(etat);
     majPupitres.forEach((f) => f(etat));
     $('auto').checked = etat.reglages.postesAutomatiques;
@@ -383,8 +470,6 @@
     const ok = moteur.estConnecte();
     $('liaison').textContent = ok ? 'TCO connecté' : 'TCO non connecté';
     $('liaison').className = ok ? 'en-ligne' : 'hors-ligne';
-    // Une fois relié, le grand code se replie ; il réapparaît si la liaison est perdue
-    $('seance').classList.toggle('relie', ok);
     if (ok && $('journal').textContent === 'En attente du TCO.') $('journal').textContent = 'Relié au TCO.';
   }, 500);
-})();
+}};

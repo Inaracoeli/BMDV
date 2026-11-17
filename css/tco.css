@@ -133,6 +133,7 @@ html, body {
 #seance .statut::before { content: "●"; margin: 0 4px 0 6px; color: #8a8f95; }
 #seance[data-statut="attente"] .statut::before { color: #ffb02e; }
 #seance[data-statut="relie"] .statut::before { color: #2fc650; }
+#seance[data-statut="refus"] .statut::before { color: #f0281c; }
 /* ---------- Écran d'accueil (code de séance) ---------- */
 #accueil { display: none; }
 body.verrouille #accueil {
@@ -140,23 +141,45 @@ body.verrouille #accueil {
   background: #17191c;
 }
 body.verrouille .tco, body.verrouille #seance, body.verrouille #toast { visibility: hidden; }
-#accueil .carte {
-  width: min(480px, 90vw); background: #f7f4e4; border: 2px solid #0f1012; border-radius: 10px;
-  padding: 26px 28px 22px; color: #2b2f33; font: 15px/1.4 Arial, Helvetica, sans-serif;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+#accueil {
+  background: radial-gradient(ellipse at 30% 20%, #2a2f35 0%, #17191c 55%, #0e0f11 100%);
+  color: #e8e8e4; font: 16px/1.45 Arial, Helvetica, sans-serif;
 }
-#accueil .titre { font: 700 34px Arial, sans-serif; letter-spacing: 8px; color: #1b1e21; }
-#accueil .sous-titre { color: #6b6f74; margin: 2px 0 22px; padding-bottom: 14px; border-bottom: 2px solid #d9730d; }
-#accueil label { display: block; margin-bottom: 8px; }
-#accueil input {
-  width: 100%; box-sizing: border-box; font: 700 26px "Courier New", monospace; letter-spacing: 3px; text-transform: uppercase;
-  padding: 10px 12px; border: 2px solid #55595e; border-radius: 6px; background: #fff;
+#accueil .panneau { width: min(980px, 92vw); }
+#accueil .marque { display: flex; align-items: baseline; gap: 16px; padding-bottom: 14px; margin-bottom: 34px; border-bottom: 2px solid #d9730d; }
+#accueil .marque .nom { font: 700 40px Arial, sans-serif; letter-spacing: 10px; }
+#accueil .marque .sous { color: #9aa0a6; letter-spacing: 1px; }
+#accueil .corps-accueil { display: grid; grid-template-columns: auto 1fr; gap: 56px; align-items: center; }
+#accueil .qr {
+  width: 300px; height: 300px; padding: 22px; background: #fff; border-radius: 22px;
+  box-shadow: 0 0 0 6px rgba(217, 115, 13, .25), 0 18px 50px rgba(0, 0, 0, .55);
+  animation: qr-respire 3s ease-in-out infinite;
 }
-#accueil .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-#accueil .actions button { font: 700 15px Arial, sans-serif; padding: 10px 22px; border-radius: 6px; cursor: pointer; border: 1px solid #55595e; background: #fdfcf5; }
-#accueil .actions .relier { background: #d9730d; border-color: #a85608; color: #fff; }
-#accueil .etat { min-height: 1.4em; margin: 14px 0 0; color: #55595e; }
-#accueil .etat.erreur { color: #b3261e; }
+#accueil .qr svg { width: 100%; height: 100%; display: block; }
+@keyframes qr-respire { 50% { box-shadow: 0 0 0 12px rgba(217, 115, 13, .12), 0 18px 50px rgba(0, 0, 0, .55); } }
+#accueil[data-statut="relie"] .qr { animation: none; box-shadow: 0 0 0 6px rgba(47, 198, 80, .5), 0 18px 50px rgba(0, 0, 0, .55); }
+#accueil h1 { font-size: 30px; line-height: 1.2; margin: 0 0 18px; }
+#accueil .etapes { list-style: none; counter-reset: etape; padding: 0; margin: 0 0 26px; }
+#accueil .etapes li { counter-increment: etape; display: flex; align-items: center; gap: 14px; margin: 12px 0; font-size: 18px; }
+#accueil .etapes li::before {
+  content: counter(etape); flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; background: #d9730d; color: #fff;
+}
+#accueil .secours { color: #9aa0a6; font-size: 14px; }
+#accueil .secours b { display: block; margin-top: 6px; color: #e8e8e4; font: 700 28px "Courier New", monospace; letter-spacing: 3px; user-select: all; }
+#accueil .actions { display: flex; gap: 10px; margin-top: 22px; }
+#accueil .actions button {
+  font: 700 14px Arial, sans-serif; padding: 9px 18px; border-radius: 6px; cursor: pointer;
+  color: #e8e8e4; background: transparent; border: 1px solid #55595e;
+}
+#accueil .actions button:hover { border-color: #d9730d; }
+#accueil .etat { min-height: 1.4em; margin: 18px 0 0; color: #9aa0a6; }
+#accueil .etat::before { content: "●"; margin-right: 8px; color: #ffb02e; animation: clignote 1.2s infinite; }
+#accueil[data-statut="relie"] .etat::before { color: #2fc650; animation: none; }
+#accueil .etat.erreur { color: #ffb3ad; }
+#accueil .etat.erreur::before { color: #f0281c; animation: none; }
+@keyframes clignote { 50% { opacity: .2; } }
+@media (max-width: 760px) { #accueil .corps-accueil { grid-template-columns: 1fr; justify-items: center; gap: 24px; } #accueil .qr { width: 220px; height: 220px; } }
 
 #toast.visible { opacity: 1; transform: translate(-50%, 0); }
 

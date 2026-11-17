@@ -11,23 +11,65 @@
 <!--
   Écran formateur, pensé pour un téléphone tenu à la verticale.
   Il ne contient pas le moteur : il affiche l'état reçu du TCO et lui
-  envoie des actions (js/liaison.js). Onglets : Postes, Trains, Bord (tableau de bord), Dérangements.
+  envoie des actions (js/liaison.js). On s'y connecte au compte formateur
+  (js/acces.js), puis on rejoint la séance en scannant le QR code du PC. Onglets : Postes, Trains, Bord (tableau de bord), Dérangements.
 -->
 
-<header>
-  <div class="titre">BMDV <span>Formateur</span></div>
-  <div id="liaison" class="hors-ligne">TCO non connecté</div>
-</header>
-<div id="seance">
-  <div class="consigne">Code de séance à saisir sur le PC du TCO</div>
-  <div class="code-grand" id="code-seance"></div>
-  <div class="resume"><span>Séance <b id="code-court"></b></span><button id="nouvelle-seance" type="button">Nouvelle séance</button></div>
+<!-- Accès : connexion au compte formateur, puis choix de la séance (QR code du PC) -->
+<div id="acces" class="ecran">
+  <div class="marque-acces"><span class="nom">BMDV</span><span>Formateur</span></div>
+
+  <form id="form-connexion" class="panneau-acces" hidden autocomplete="on">
+    <h1>Connexion</h1>
+    <p class="aide">Ton téléphone devient la clé de la séance.</p>
+    <label>E-mail <input id="email" name="username" type="email" autocomplete="username" required></label>
+    <label>Mot de passe <input id="mot-de-passe" name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="principal">Se connecter</button>
+    <p class="erreur" id="erreur-connexion" role="alert"></p>
+  </form>
+
+  <div id="choix-seance" class="panneau-acces" hidden>
+    <h1>Rejoindre une séance</h1>
+    <div class="illustration" aria-hidden="true">
+      <svg viewBox="0 0 120 80"><rect x="6" y="10" width="62" height="44" rx="4" fill="#2b2f33" stroke="#9aa0a6"/>
+        <rect x="22" y="18" width="30" height="30" rx="2" fill="#fff"/><path d="M26 22h8v8h-8zM40 22h8v8h-8zM26 36h8v8h-8zM41 37h3v3h-3zM45 41h3v3h-3z" fill="#17191c"/>
+        <rect x="30" y="56" width="14" height="4" fill="#9aa0a6"/>
+        <g class="tel"><rect x="78" y="14" width="34" height="58" rx="6" fill="#17191c" stroke="#d9730d" stroke-width="2"/>
+        <circle cx="95" cy="40" r="9" fill="none" stroke="#d9730d" stroke-width="2"/><circle cx="95" cy="40" r="3" fill="#d9730d"/></g></svg>
+    </div>
+    <p class="consigne">Scanne le QR code affiché sur le PC avec l'appareil photo du téléphone.</p>
+    <div class="separateur">ou saisis le code</div>
+    <input id="code-saisi" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" autocapitalize="characters">
+    <button type="button" id="rejoindre" class="principal">Rejoindre</button>
+    <button type="button" id="reprendre" class="secondaire" hidden></button>
+    <p class="erreur" id="erreur-seance" role="alert"></p>
+    <button type="button" class="lien" id="deconnexion">Se déconnecter</button>
+  </div>
 </div>
-<div id="journal">En attente du TCO.</div>
+
+<div id="app" hidden>
+<header id="barre">
+  <div class="ligne1">
+    <span class="marque-mini">BMDV</span>
+    <span id="code-court"></span>
+    <span id="liaison" class="hors-ligne">TCO non connecté</span>
+    <button type="button" id="menu" aria-label="Menu de la séance">⋯</button>
+  </div>
+  <div id="alertes"></div>
+  <div id="journal">En attente du TCO.</div>
+  <div id="menu-seance" hidden>
+    <button type="button" id="changer-seance">Changer de séance</button>
+    <button type="button" id="se-deconnecter">Se déconnecter</button>
+  </div>
+</header>
 
 <main>
   <section id="onglet-postes" class="actif">
-    <label class="interrupteur"><input type="checkbox" id="auto"> <span>Alfa et Charlie automatiques</span></label>
+    <label class="interrupteur carte-auto"><input type="checkbox" id="auto"> <span><b>Mode automatique</b><small>Alfa et Charlie annoncent et rendent voie libre seuls</small></span></label>
+    <div class="segmente onglets-postes" id="choix-poste">
+      <button type="button" data-poste="Alfa" class="actif">Alfa <i class="pastille"></i></button>
+      <button type="button" data-poste="Charlie">Charlie <i class="pastille"></i></button>
+    </div>
     <div id="pupitres"></div>
   </section>
 
@@ -103,6 +145,7 @@
   <button data-onglet="bord">Bord <span id="nb-refus"></span></button>
   <button data-onglet="derangements">Dérangements</button>
 </nav>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
@@ -110,5 +153,6 @@
 <script src="js/liaison.js"></script>
 <script src="js/schema.js"></script>
 <script src="js/formateur.js"></script>
+<script src="js/acces.js"></script>
 </body>
 </html>

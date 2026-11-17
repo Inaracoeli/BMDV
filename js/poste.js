@@ -1,9 +1,8 @@
 // ==========================================================
 // Simulateur BMDV — démarrage du poste B (page du TCO)
-// Crée le moteur, le relie au TCO, fait tourner l'horloge et
-// rejoint la séance créée par le formateur (code saisi sur ce PC).
-// Le TCO reste masqué par l'écran d'accueil tant que le téléphone du
-// formateur n'a pas répondu sur le code saisi.
+// Crée le moteur, le relie au TCO, fait tourner l'horloge et ouvre la
+// séance (QR code affiché sur ce PC). Le TCO reste masqué par l'écran
+// d'accueil tant que le téléphone du formateur, connecté, n'a pas rejoint.
 // ==========================================================
 (function () {
   const moteur = Moteur.creer();
@@ -20,73 +19,79 @@
     dernier = maintenant;
   }, 100);
 
-  // ---------- Écran d'accueil : saisie du code de séance ----------
+  // ---------- Écran d'accueil : QR code de la séance ----------
+  // Le téléphone du formateur scanne le QR code (ou saisit le code en clair),
+  // se connecte à son compte et rejoint la séance : le TCO s'ouvre alors.
   const accueil = document.getElementById('accueil');
-  const champ = document.getElementById('code-seance');
   const etat = accueil.querySelector('.etat');
   const annuler = accueil.querySelector('.annuler');
-  let changement = false;   // accueil rouvert depuis la pastille, pour changer de séance
-  let depuis = Date.now();  // début de l'attente du formateur
+  let changement = false;   // accueil rouvert depuis la pastille
+  let depuis = Date.now();
+  let codeAffiche = null;
 
+  function dessinerQR() {
+    const code = seance.code();
+    if (code === codeAffiche) return;
+    codeAffiche = code;
+    document.getElementById('code-clair').textContent = code;
+    const zone = document.getElementById('qr');
+    if (typeof qrcode !== 'function') { zone.textContent = 'QR code indisponible'; return; }
+    const qr = qrcode(0, 'M');
+    qr.addData(seance.url());
+    qr.make();
+    zone.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+  }
   function verrouiller(pourChanger) {
     changement = pourChanger;
     document.body.classList.add('verrouille');
-    champ.value = seance.code() || '';
     annuler.hidden = !pourChanger;
     depuis = Date.now();
+    dessinerQR();
     majAccueil();
-    champ.focus();
   }
   function deverrouiller() {
     changement = false;
     document.body.classList.remove('verrouille');
   }
-  function relier() {
-    if (!seance.relier(champ.value)) {
-      etat.textContent = 'Code incomplet ou incorrect : 12 caractères, comme affiché sur le téléphone.';
-      etat.className = 'etat erreur';
+  annuler.addEventListener('click', deverrouiller);
+  // Nouveau code : le téléphone actuel est déconnecté, il faudra scanner de nouveau
+  const nouveau = accueil.querySelector('.nouveau');
+  let confirmer = null;
+  nouveau.addEventListener('click', () => {
+    if (!confirmer && seance.contact()) {
+      nouveau.textContent = 'Confirmer : déconnecter le téléphone';
+      confirmer = setTimeout(() => { confirmer = null; nouveau.textContent = 'Nouveau code'; }, 4000);
       return;
     }
+    clearTimeout(confirmer); confirmer = null;
+    nouveau.textContent = 'Nouveau code';
+    seance.nouveauCode();
     changement = false;
     annuler.hidden = true;
     depuis = Date.now();
-    champ.value = seance.code();
+    dessinerQR();
     majAccueil();
-  }
-  accueil.querySelector('.relier').addEventListener('click', relier);
-  champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') relier(); });
-  annuler.addEventListener('click', deverrouiller);
+  });
 
   function majAccueil() {
     if (!document.body.classList.contains('verrouille')) return;
-    // Le téléphone a répondu : le TCO s'affiche
     if (seance.contact() && !changement) { deverrouiller(); return; }
-    if (changement) {
-      etat.textContent = 'Saisissez le nouveau code affiché sur le téléphone.';
-      etat.className = 'etat';
-      return;
-    }
     const s = seance.statut();
-    if (s === 'sans-code') {
-      etat.textContent = '';
-    } else if (s === 'indisponible') {
-      etat.textContent = 'Liaison indisponible : vérifiez la connexion internet de ce PC, puis rechargez la page.';
-      etat.className = 'etat erreur';
-    } else if (s === 'connexion') {
-      etat.textContent = 'Connexion…';
-      etat.className = 'etat';
-    } else {
-      const long = Date.now() - depuis > 8000;
-      etat.textContent = long
-        ? "Pas de réponse : vérifiez que l'écran formateur est ouvert sur le téléphone et que le code est identique."
-        : 'En attente du téléphone du formateur…';
-      etat.className = long ? 'etat erreur' : 'etat';
-    }
+    const message = {
+      indisponible: ['Liaison indisponible : vérifie la connexion internet de ce PC, puis recharge la page.', true],
+      connexion: ['Connexion au service de liaison…', false],
+      refus: ["Un téléphone a essayé de rejoindre la séance sans être connecté au compte formateur.", true],
+      attente: [changement ? 'Séance ouverte. Scanne de nouveau le code pour changer de téléphone.' : 'En attente du téléphone du formateur…', false],
+      relie: ['Téléphone du formateur relié.', false],
+    }[s] || ['', false];
+    etat.textContent = message[0];
+    etat.className = message[1] ? 'etat erreur' : 'etat';
+    accueil.dataset.statut = s;
   }
 
   // ---------- Pastille discrète en bas à droite, une fois la séance ouverte ----------
   const STATUTS = {
-    'sans-code': '',
+    refus: 'téléphone refusé',
     indisponible: 'liaison indisponible',
     connexion: 'connexion…',
     attente: 'téléphone en veille ?',
