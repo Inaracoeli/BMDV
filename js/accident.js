@@ -1,6 +1,7 @@
 // ==========================================================
 // Y-TECH — mise en scène des accidents (rattrapage, déraillement)
-// Dramatique et humoristique, sur le TCO comme sur le téléphone.
+// Une gazette fictive affiche l'erreur de sécurité en gros titre, avec un
+// freinage d'urgence et un choc ; sur le TCO comme sur le téléphone.
 // Accident.brancher(source) : source = moteur (TCO) ou séance (téléphone).
 // ==========================================================
 const Accident = (function () {
@@ -48,32 +49,74 @@ const Accident = (function () {
     return `<svg viewBox="0 0 400 120" class="scene rattrapage">${rails}${wagon(214, 'devant', '#ece9dc')}${wagon(10, 'fonce', '#d9730d')}${etoiles}${fumee}</svg>`;
   }
 
+  // ---------- La gazette : erreur de sécurité en gros titre ----------
   const voile = document.createElement('div');
   voile.id = 'accident';
   voile.setAttribute('role', 'alertdialog');
-  voile.innerHTML = '<div class="cadre"><div class="bandeau"><span>⚠ ACCIDENT</span></div><h1></h1><div class="scene-zone"></div>' +
-    '<p class="faits"></p><p class="cause"></p><p class="bon-mot"></p><button type="button">Bon… on reprend</button></div>';
+  voile.innerHTML = `
+    <article class="gazette">
+      <header class="une">
+        <div class="oreille gauche">Édition spéciale</div>
+        <div class="titre-journal">Le Canton Libéré</div>
+        <div class="oreille droite">Prix : un rapport d'incident</div>
+      </header>
+      <div class="filet"><span class="date"></span><span>Quotidien indépendant des aiguilleurs</span><span>N° <b class="numero"></b></span></div>
+      <h1 class="manchette"></h1>
+      <p class="chapeau"></p>
+      <div class="colonnes-journal">
+        <figure class="photo"><div class="scene-zone"></div><figcaption></figcaption></figure>
+        <div class="article"></div>
+      </div>
+      <div class="bas-de-page">
+        <p class="breve"></p>
+        <button type="button" class="prison">Aller en prison</button>
+      </div>
+    </article>`;
   document.body.append(voile);
-  voile.querySelector('button').addEventListener('click', () => {
+  voile.querySelector('.prison').addEventListener('click', () => {
     voile.classList.remove('visible');
     document.body.classList.remove('secousse');
   });
 
+  const BREVES = [
+    'Petite annonce — Poste B recherche aiguilleur. Lecture du règlement exigée.',
+    'Météo — Ciel couvert sur la ligne, risque d\'orage au bureau du chef de circulation.',
+    'Courrier des lecteurs — « Le block, c\'est pourtant simple », écrit un retraité de Valence.',
+    'Sport — L\'aiguilleur de Bravo battu au sprint par le rapport d\'enquête.',
+    'Horoscope — Aiguilleur : une rencontre importante avec un inspecteur est à prévoir.',
+  ];
+
   function montrer(a) {
-    const titre = a.genre === 'deraillement' ? 'DÉRAILLEMENT !' : 'RATTRAPAGE !';
-    voile.querySelector('h1').textContent = titre;
+    const deraillement = a.genre === 'deraillement';
+    // Bilan fictif, proportionné à la vitesse
+    const morts = Math.max(2, Math.round(a.kmh / (deraillement ? 6 : 9)));
+    const blesses = morts * 3 + Math.round(Math.random() * 10);
+    const lieu = `près du poste de Bravo, voie ${a.voie[1]}, PK ${a.pk}`;
+    voile.querySelector('.date').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    voile.querySelector('.numero').textContent = 1000 + (a.id || 1);
+    voile.querySelector('.manchette').textContent = deraillement
+      ? `DÉRAILLEMENT MEURTRIER À BRAVO : ${morts} MORTS`
+      : `COLLISION À BRAVO : LE TRAIN ${a.trains[0]} PERCUTE LE ${a.trains[1]}, ${morts} MORTS`;
+    voile.querySelector('.chapeau').textContent = deraillement
+      ? `Lancé à ${a.kmh} km/h, le train ${a.trains[0]} a quitté les rails ${lieu}. L'aiguilleur est entendu par les enquêteurs.`
+      : `À ${a.kmh} km/h, le train ${a.trains[0]} a rattrapé le train ${a.trains[1]} ${lieu}. Le poste d'aiguillage est au cœur de l'enquête.`;
     voile.querySelector('.scene-zone').innerHTML = scene(a.genre);
-    voile.querySelector('.faits').textContent = a.genre === 'deraillement'
-      ? `Train ${a.trains[0]} · voie ${a.voie[1]} · PK ${a.pk} · ${a.kmh} km/h`
-      : `Train ${a.trains[0]} contre train ${a.trains[1]} · voie ${a.voie[1]} · PK ${a.pk} · ${a.kmh} km/h`;
-    voile.querySelector('.cause').textContent = `Cause : ${a.cause}.`;
-    voile.querySelector('.bon-mot').textContent = hasard([...BONS_MOTS[a.genre], ...BONS_MOTS.commun]);
+    voile.querySelector('figcaption').textContent = deraillement
+      ? `Les voitures du train ${a.trains[0]} gisent en travers de la voie. (Photo : notre envoyé spécial)`
+      : `Le choc a eu lieu en pleine voie. (Photo : notre envoyé spécial)`;
+    voile.querySelector('.article').innerHTML = `
+      <p><b>Le bilan est lourd</b> : ${morts} morts et ${blesses} blessés. Sur le quai, des veuves en pleurs attendaient encore des nouvelles
+        de leurs proches tard dans la soirée ; une cellule d'écoute a été ouverte en gare.</p>
+      <p><b>Selon nos informations</b>, l'enquête s'oriente vers une erreur de sécurité au poste : ${a.cause}.</p>
+      <p>« Il suffisait d'appliquer le règlement », soupire un cheminot sous couvert d'anonymat.
+        ${hasard([...BONS_MOTS[a.genre], ...BONS_MOTS.commun])}</p>`;
+    voile.querySelector('.breve').textContent = hasard(BREVES);
     voile.classList.remove('visible'); void voile.offsetWidth;
     voile.classList.add('visible');
     document.body.classList.remove('secousse'); void document.body.offsetWidth;
     document.body.classList.add('secousse');
-    if (typeof Sonnerie !== 'undefined' && Sonnerie.fracas) Sonnerie.fracas();
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
+    if (typeof Sonnerie !== 'undefined' && Sonnerie.freinage) Sonnerie.freinage();
+    if (navigator.vibrate) navigator.vibrate([200, 80, 200, 80, 900]);
   }
 
   function brancher(source) {

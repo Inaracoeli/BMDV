@@ -7,6 +7,8 @@ const FormateurApp = { demarrer(moteur, acces) {
   if (FormateurApp.demarre) return;
   FormateurApp.demarre = true;
   if (typeof Accident !== 'undefined') Accident.brancher(moteur);
+  // Le son n'est permis qu'après un premier toucher
+  if (typeof Sonnerie !== 'undefined') document.addEventListener('pointerdown', Sonnerie.deverrouiller, { once: true });
   const $ = (id) => document.getElementById(id);
   const creer = (balise, classe, texte) => {
     const e = document.createElement(balise);

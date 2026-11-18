@@ -134,27 +134,44 @@ const Sonnerie = (function () {
     } catch (e) { /* pas de son disponible */ }
   }
 
-  // Fracas d'accident : choc sourd, crissement métallique, ferraille qui retombe
-  function fracas() {
+  // Freinage d'urgence puis choc : crissement des roues sur le rail (~2,6 s), puis impact et ferraille
+  function freinage() {
     try {
       contexte();
       const sr = ctx.sampleRate;
-      const n = Math.round(2.2 * sr);
-      const b = ctx.createBuffer(1, n, sr);
-      const d = b.getChannelData(0);
+      const duree = 4.2;
+      const choc = 2.6; // instant du choc
+      const n = Math.round(duree * sr);
+      const b = ctx.createBuffer(2, n, sr);
+      const g = b.getChannelData(0);
+      const dr = b.getChannelData(1);
       let bruit = 0;
+      let phase1 = 0;
+      let phase2 = 0;
       for (let i = 0; i < n; i++) {
         const t = i / sr;
-        bruit = 0.6 * bruit + 0.4 * (Math.random() * 2 - 1);
-        const choc = Math.sin(2 * Math.PI * (55 - 20 * t) * t) * Math.exp(-t * 4) * 1.2;
-        const crisse = Math.sin(2 * Math.PI * (2400 + 600 * Math.sin(t * 9)) * t) * Math.exp(-((t - 0.25) ** 2) / 0.03) * 0.25;
-        const ferraille = bruit * Math.exp(-t * 2.2) * (0.5 + 0.5 * Math.sin(t * 37) ** 2);
-        d[i] = Math.max(-1, Math.min(1, (choc + crisse + ferraille) * Math.min(1, t / 0.003)));
+        bruit = 0.75 * bruit + 0.25 * (Math.random() * 2 - 1);
+        let s = 0;
+        if (t < choc) {
+          // Crissement : deux sifflements aigus qui glissent et tremblent, sur un souffle de freinage
+          const env = Math.min(1, t / 0.15) * (0.6 + 0.4 * Math.sin(t * 7) ** 2);
+          phase1 += 2 * Math.PI * (3100 - 500 * (t / choc) + 140 * Math.sin(t * 23)) / sr;
+          phase2 += 2 * Math.PI * (4650 - 700 * (t / choc) + 220 * Math.sin(t * 31)) / sr;
+          s = env * (0.32 * Math.sin(phase1) + 0.16 * Math.sin(phase2)) + 0.18 * bruit * Math.min(1, t / 0.4);
+        } else {
+          const u = t - choc;
+          const sourd = Math.sin(2 * Math.PI * (48 - 18 * u) * u) * Math.exp(-u * 3.5) * 1.4;
+          const ferraille = (Math.random() * 2 - 1) * Math.exp(-u * 2.4) * (0.45 + 0.55 * Math.sin(u * 41) ** 2);
+          s = (sourd + ferraille) * Math.min(1, u / 0.002);
+        }
+        s = Math.max(-1, Math.min(1, s));
+        g[i] = s;
+        dr[i] = t < choc ? s * (0.85 + 0.15 * Math.sin(t * 3)) : s;
       }
       const source = ctx.createBufferSource();
       source.buffer = b;
       const gain = ctx.createGain();
-      gain.gain.value = 0.6;
+      gain.gain.value = 0.7;
       source.connect(gain).connect(ctx.destination);
       source.start();
     } catch (e) { /* pas de son disponible */ }
@@ -163,7 +180,7 @@ const Sonnerie = (function () {
   return {
     clic,
     gong,
-    fracas,
+    freinage,
     // regler({ annonce: true|false, reddition: true|false })
     regler(voulu) {
       Object.keys(TIMBRES).forEach((nom) => (voulu[nom] ? demarrer(nom) : arreter(nom)));
