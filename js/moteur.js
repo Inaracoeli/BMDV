@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — moteur du block (poste B)
+// Y-TECH — moteur du block (poste B)
 //
 // Aucune dépendance au navigateur : l'état est un simple objet
 // (sérialisable en JSON, pour la synchronisation future) et tout

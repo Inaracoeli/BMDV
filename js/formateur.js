@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — écran formateur
+// Y-TECH — écran formateur
 // Affiche l'état reçu du TCO et envoie les actions du formateur :
 // pupitres d'Alfa et de Charlie, trains, dérangements.
 // ==========================================================

@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — démarrage du poste B (page du TCO)
+// Y-TECH — démarrage du poste B (page du TCO)
 // Crée le moteur, le relie au TCO, fait tourner l'horloge et ouvre la
 // séance (QR code affiché sur ce PC). Le TCO reste masqué par l'écran
 // d'accueil tant que le téléphone du formateur, connecté, n'a pas rejoint.

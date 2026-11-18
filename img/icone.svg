@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icône Y-TECH : l'aiguille en Y -->
+  <rect width="64" height="64" rx="12" fill="#16181c"/>
+  <rect x="5" y="5" width="54" height="54" rx="8" fill="#bfe3e6" fill-opacity=".14" stroke="#7fb7bd" stroke-opacity=".6"/>
+  <line x1="32" y1="35" x2="45" y2="13" stroke="#d9730d" stroke-width="7"/>
+  <polyline points="32,55 32,35 19,13" fill="none" stroke="#ece9dc" stroke-width="7" stroke-linejoin="miter"/>
+</svg>

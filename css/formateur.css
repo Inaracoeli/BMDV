@@ -1,5 +1,5 @@
 /* ==========================================================
-   Simulateur BMDV — écran formateur (téléphone, à la verticale)
+   Y-TECH — écran formateur (téléphone, à la verticale)
    ========================================================== */
 
 :root {
@@ -32,8 +32,8 @@ body {
   background: radial-gradient(ellipse at 50% 0%, #2a2f35 0%, #17191c 60%);
   display: flex; flex-direction: column; align-items: center;
 }
-.marque-acces { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 30px; }
-.marque-acces .nom { font-size: 34px; font-weight: 700; letter-spacing: 8px; }
+.marque-acces { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 10px 0 26px; }
+.marque-acces .logo { height: 92px; display: block; }
 .marque-acces span:last-child { color: var(--orange); letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
 .panneau-acces { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; animation: monte .35s ease-out; }
 @keyframes monte { from { opacity: 0; transform: translateY(14px); } }
@@ -63,7 +63,8 @@ body {
   border-bottom: 2px solid var(--orange); padding-top: env(safe-area-inset-top);
 }
 .ligne1 { display: flex; align-items: center; gap: 10px; padding: 9px 12px 7px; }
-.marque-mini { font-weight: 700; font-size: 18px; letter-spacing: 3px; }
+.marque-mini { display: flex; align-items: center; gap: 7px; font: 700 17px 'Courier New', monospace; letter-spacing: 1px; }
+.marque-mini img { width: 24px; height: 24px; }
 #code-court { font: 700 13px "Courier New", monospace; color: var(--discret); letter-spacing: 1px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #liaison { font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
 #liaison::before { content: "●"; margin-right: 5px; }

@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — sonneries du block
+// Y-TECH — sonneries du block
 // Sonnerie électromécanique : un marteau frappe très vite un
 // timbre métallique. Le son est synthétisé (aucun fichier audio) :
 // une rafale de frappes, chacune faite de partiels inharmoniques

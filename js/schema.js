@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — schéma simplifié de la ligne, avec les PK
+// Y-TECH — schéma simplifié de la ligne, avec les PK
 // Dessiné à partir de la géométrie du moteur : il suit les longueurs
 // réglées par le formateur. L'échelle n'est pas linéaire (les sections
 // longues sont resserrées) pour que la gare reste lisible.

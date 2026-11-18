@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — mini guides, ouverts par le bouton GUIDE du TCO
+// Y-TECH — mini guides, ouverts par le bouton GUIDE du TCO
 //  1. Faire circuler un train entre Alfa (A), Bravo (B) et Charlie (C)
 //  2. Gare temporaire : cesser et reprendre le service de Bravo (ES / HS)
 // Rappels synthétiques rédigés pour le simulateur.

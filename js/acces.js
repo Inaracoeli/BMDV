@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — accès à l'écran formateur
+// Y-TECH — accès à l'écran formateur
 // 1. Connexion au compte formateur (/api/connexion) : le jeton obtenu
 //    fait du téléphone la clé de la séance (30 jours).
 // 2. Choix de la séance : code reçu par le QR code du PC (#s=…), saisi

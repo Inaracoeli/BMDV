@@ -1,4 +1,8 @@
-# BMDV — Simulateur de block manuel de double voie
+# Y-TECH — simulateur de poste d'aiguillage (block manuel de double voie)
+
+![Y-TECH](img/logo-y-tech.svg)
+
+*Y comme l'aiguille ; le trait d'union est son levier.*
 
 Simulateur web destiné à la formation des aiguilleurs : un TCO du poste B pour l'élève,
 un écran formateur (pupitres Alfa / Charlie, scénarios, dérangements), synchronisés en temps réel.

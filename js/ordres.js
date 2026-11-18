@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — ordres de franchissement (bulletins C, S, MV)
+// Y-TECH — ordres de franchissement (bulletins C, S, MV)
 // L'agent de Bravo clique sur un bulletin de la console, remplit
 // le formulaire et le délivre. Le moteur remet l'ordre au train ;
 // le conducteur ne franchit que si l'ordre correspond à ce qu'il

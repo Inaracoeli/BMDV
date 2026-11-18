@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — tableau d'enclenchement du point E
+// Y-TECH — tableau d'enclenchement du point E
 // Tableau à deux entrées : en ligne les manœuvres et les états,
 // en colonne les conditions. Une case ✓ exige la condition,
 // une case ✗ exige son contraire, une case vide est sans effet.
