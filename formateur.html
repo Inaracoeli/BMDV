@@ -43,10 +43,11 @@
         <g class="tel"><rect x="78" y="14" width="34" height="58" rx="6" fill="#17191c" stroke="#d9730d" stroke-width="2"/>
         <circle cx="95" cy="40" r="9" fill="none" stroke="#d9730d" stroke-width="2"/><circle cx="95" cy="40" r="3" fill="#d9730d"/></g></svg>
     </div>
-    <p class="consigne">Scanne le QR code affiché sur le PC avec l'appareil photo du téléphone.</p>
+    <button type="button" id="scanner-qr" class="principal scan">Scanner le QR code du PC</button>
+    <p class="consigne">La caméra s'ouvre ici même : vise le QR code affiché sur le PC.</p>
     <div class="separateur">ou saisis le code</div>
     <input id="code-saisi" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" autocapitalize="characters">
-    <button type="button" id="rejoindre" class="principal">Rejoindre</button>
+    <button type="button" id="rejoindre" class="secondaire">Rejoindre avec ce code</button>
     <button type="button" id="reprendre" class="secondaire" hidden></button>
     <p class="erreur" id="erreur-seance" role="alert"></p>
     <button type="button" class="lien" id="deconnexion">Se déconnecter</button>
@@ -162,6 +163,7 @@
 <script src="js/sonnerie.js"></script>
 <script src="js/accident.js"></script>
 <script src="js/formateur.js"></script>
+<script src="js/scanner.js"></script>
 <script src="js/acces.js"></script>
 </body>
 </html>

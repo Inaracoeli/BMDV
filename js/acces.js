@@ -64,6 +64,8 @@
     ouvrir(c);
   }
   $('rejoindre').addEventListener('click', () => rejoindre($('code-saisi').value));
+  // Lecteur de QR code intégré : la caméra s'ouvre dans l'appli
+  $('scanner-qr').addEventListener('click', () => Scanner.ouvrir((code) => rejoindre(code)));
   $('code-saisi').addEventListener('keydown', (e) => { if (e.key === 'Enter') rejoindre($('code-saisi').value); });
   $('reprendre').addEventListener('click', () => rejoindre(Liaison.dernierCodeFormateur()));
   const deconnecter = () => { oublierJeton(); history.replaceState(null, '', location.pathname); location.reload(); };

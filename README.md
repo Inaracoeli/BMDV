@@ -30,6 +30,8 @@ la base de données, accessible uniquement après authentification.
 | `js/tableau.js` | Tableau d'enclenchement du point E (bouton TABLEAU D'ENCLENCH.) : consultation, modification, export |
 | `js/acces.js` | Écran formateur : connexion au compte, choix de la séance (QR code ou code) |
 | `functions/` | Connexion du formateur (Cloudflare Pages Functions) |
+| `js/scanner.js` | Lecteur de QR code intégré à l'écran formateur (caméra du téléphone) |
+| `js/vendor/jsQR.js` | Décodeur de QR code (Cosmo Wolfe, licence Apache 2.0), chargé si le navigateur ne sait pas lire les QR codes |
 | `js/vendor/qrcode.js` | Générateur de QR code (Kazuhiko Arase, licence MIT) |
 | `js/ordres.js` | Ordres de franchissement (bulletins C, S, MV) remplis depuis la console |
 | `js/registre.js` | Registre de cantonnement de Bravo (bouton REGISTRE) : saisie, exemples, tenue du registre, impression |
@@ -39,7 +41,8 @@ la base de données, accessible uniquement après authentification.
 
 1. Ouvrir `tco.html` sur le PC de l'élève : il crée la séance et affiche un **QR code** (et le code en clair,
    par exemple `K7Q2-M9XD-3FPA`, en secours). Le TCO reste masqué.
-2. Scanner le QR code avec l'appareil photo du téléphone : `formateur.html` s'ouvre sur la séance. Se connecter au
+2. Sur le téléphone, ouvrir l'appli formateur et toucher « Scanner le QR code du PC » (la caméra s'ouvre dans l'appli), ou
+   scanner avec l'appareil photo : `formateur.html` s'ouvre sur la séance. Se connecter au
    compte formateur (une fois par téléphone, 30 jours). Le TCO s'affiche aussitôt. Sans appareil photo, ouvrir
    `formateur.html` et saisir le code.
 3. Pour changer de séance : pastille en bas à droite du TCO (Nouveau code), ou menu ⋯ du téléphone.
