@@ -471,7 +471,7 @@ const FormateurApp = { demarrer(moteur, acces) {
   // ---------- Témoin de liaison ----------
   setInterval(() => {
     const ok = moteur.estConnecte();
-    $('liaison').textContent = ok ? 'TCO connecté' : 'TCO non connecté';
+    $('liaison').textContent = ok ? 'TCO relié' : 'TCO absent';
     $('liaison').className = ok ? 'en-ligne' : 'hors-ligne';
     if (ok && $('journal').textContent === 'En attente du TCO.') $('journal').textContent = 'Relié au TCO.';
   }, 500);
