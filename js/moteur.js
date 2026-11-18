@@ -79,6 +79,7 @@
   const VITESSE_VUE = 30 / 3.6; // marche à vue sous ordre MV
   const MARGE_ARRET = 20;      // un train s'arrête la tête à 20 m du signal fermé
   const VITESSE_MANOEUVRE = 30 / 3.6; // mouvements de manœuvre en gare
+  const VITESSE_DEVIATION = 60 / 3.6; // au-delà, un train qui prend la communication en pointe déraille
   const VISIBILITE = 300;      // distance à laquelle un conducteur voit le train qui le précède (m)
   const PAS = 0.25;            // pas de calcul, en secondes de temps simulé
   const ACCELERATIONS = [1, 2, 5, 10, 20];
@@ -156,6 +157,8 @@
       // Ordres de franchissement délivrés par Bravo (souches), et numéros pré-imprimés
       ordres: [],
       numerosOrdres: { C: 380000, S: 840000, MV: 820000 },
+      // Accidents (rattrapage, déraillement) : mis en scène sur le TCO et le téléphone
+      accidents: [],
       gare: 'ES',         // commutateur gare : ES en service, HS hors service (gare temporaire, IN1508)
       reglages: {
         redditionAvecSonnerie: true, // voie libre rendue par action simultanée sur Sonnerie et Reddition
@@ -331,7 +334,7 @@
       messages.forEach((m) => etat.historique.push({
         h, qui: /^Conducteur/.test(m) ? 'Conducteur' : qui || acteur(action.type),
         type: action.type, ok: !!resultat.ok,
-        alerte: !!resultat.alerte || /talonn|heurte|sans autorisation|pris en pointe/.test(m), message: m,
+        alerte: !!resultat.alerte || /talonn|heurte|sans autorisation|pris en pointe|Déraillement|Rattrapage/.test(m), message: m,
       }));
       if (etat.historique.length > HISTORIQUE_MAX) etat.historique.splice(0, etat.historique.length - HISTORIQUE_MAX);
     }
@@ -504,6 +507,29 @@
     // Le conducteur voit le signal à partir de l'avertissement (début de la ZAP) :
     // s'il est fermé, il freine pour s'arrêter devant. S'il se ferme trop tard,
     // le train ne peut plus s'arrêter et le franchit.
+    // ---------- Accidents ----------
+    function causeRattrapage(t) {
+      const f = t.franchissement;
+      if (!f) return 'le train a rattrapé celui qui le précédait';
+      if (f.genre === 'sans autorisation') return 'signal fermé franchi sans autorisation';
+      if (f.genre === 'formateur') return 'franchissement du signal fermé autorisé par le formateur';
+      if (f.remarques && f.remarques.length) return `ordre ${f.ordres.join(' + ')} non conforme : ${f.remarques.join(' ; ')}`;
+      if (!f.ordres.includes('MV')) return `ordre ${f.ordres.join(' + ')} sans marche à vue alors que le canton était occupé`;
+      return 'marche à vue sous ordre MV';
+    }
+    function accident(genre, trains, v, cause, evenements) {
+      const t = trains[0];
+      const g = geometrie(etat, t.voie);
+      trains.forEach((x) => { x.accidente = true; x.arrete = true; x.urgence = true; x.v = 0; });
+      etat.accidents.push({
+        id: etat.accidents.length + 1, h: Date.now(), genre, voie: t.voie,
+        trains: trains.map((x) => x.numero), kmh: Math.round(v * 3.6), pk: formatPK(g.pk(t.s)), cause,
+      });
+      if (etat.accidents.length > 20) etat.accidents.shift();
+      const titre = genre === 'deraillement' ? `Déraillement du train ${t.numero}` : `Rattrapage : le train ${t.numero} heurte le train ${trains[1].numero}`;
+      evenements.push(`${titre} à ${Math.round(v * 3.6)} km/h (${t.voie}) — ${cause}`);
+    }
+
     // Train immédiatement devant, sur la même voie (hors trains en attente au départ)
     function trainDevant(t) {
       let devant = null;
@@ -660,6 +686,12 @@
       if (t.s < g.signal && s1 >= g.signal) {
         const autorise = franchissable();
         pedale(v);
+        // Comment le train a franchi : sert à expliquer un éventuel accident
+        const dernier = [...etat.ordres].reverse().find((o) => String(o.champs.train || '').trim() === t.numero);
+        t.franchissement = !autorise ? { genre: 'sans autorisation' }
+          : t.franchir ? { genre: 'formateur' }
+            : t.ordres && t.ordres.length ? { genre: 'ordre', ordres: t.ordres.slice(), remarques: dernier ? dernier.remarques : [] }
+              : null;
         if (!autorise) {
           evenements.push(`Train ${t.numero} a franchi le signal fermé sans autorisation : arrêt d'urgence (${t.voie})`);
           t.arrete = true;
@@ -680,6 +712,9 @@
           if (aig === 'E') {
             etat.pointE.talonnees.E = true;
             evenements.push(`Train ${t.numero} talonne l'aiguille E renversée (V1)`);
+          } else if (t.v > VITESSE_DEVIATION) {
+            // Trop vite sur la communication : déraillement
+            accident('deraillement', [t], t.v, `aiguille F renversée prise en pointe à ${Math.round(t.v * 3.6)} km/h (limite en déviation ${Math.round(VITESSE_DEVIATION * 3.6)} km/h)`, evenements);
           } else {
             evenements.push(`Train ${t.numero} pris en pointe par l'aiguille F renversée : arrêt d'urgence (V2)`);
             t.arrete = true;
@@ -690,7 +725,7 @@
       // Heurt : le train rattrape celui qui le précède
       if (devant && s1 > devant.s - devant.longueur - 1) {
         s1 = Math.max(t.s, devant.s - devant.longueur - 1);
-        if (t.v > 0.5) evenements.push(`Train ${t.numero} heurte le train ${devant.numero} (${t.voie})`);
+        if (t.v > 0.5) accident('rattrapage', [t, devant], t.v, causeRattrapage(t), evenements);
         t.v = 0;
         t.arrete = true;
         t.urgence = true;
@@ -756,6 +791,7 @@
       TRAIN_REPARTIR(a) {
         const t = trouver(a.id);
         if (!t) return sansEffet('Train introuvable');
+        if (t.accidente) return sansEffet(`Train ${t.numero} accidenté : relevage nécessaire (supprimer le train)`);
         t.arrete = false;
         t.urgence = false;
         t.aQuai = false;

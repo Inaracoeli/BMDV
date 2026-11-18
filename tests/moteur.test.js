@@ -613,6 +613,36 @@ essai('un train s\'arrête derrière celui qui le précède', () => {
   assert.ok(b.s < a.s - a.longueur && !b.urgence);
 });
 
+essai('accident : rattrapage après un franchissement, avec sa cause', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'ACCELERATION', facteur: 20 });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V1', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', origine: 'Alfa', destination: 'Bravo', numero: '1', longueur: 300 });
+  jusqua(m, () => m.lire().trains[0].terminus);
+  m.agir({ type: 'TRAIN_CREER', voie: 'V1', numero: '3', longueur: 300 });
+  m.agir({ type: 'TRAIN_FRANCHIR', id: m.lire().trains[1].id });
+  jusqua(m, () => m.lire().accidents.length > 0);
+  const acc = m.lire().accidents[0];
+  assert.strictEqual(acc.genre, 'rattrapage');
+  assert.deepStrictEqual(acc.trains, ['3', '1']);
+  assert.ok(/formateur/.test(acc.cause) && acc.kmh > 30);
+  assert.ok(!m.agir({ type: 'TRAIN_REPARTIR', id: m.lire().trains[1].id }).ok);
+});
+
+essai('accident : déraillement sur l\'aiguille F renversée prise en pointe trop vite', () => {
+  const m = Moteur.creer();
+  m.agir({ type: 'ACCELERATION', facteur: 20 });
+  m.agir({ type: 'B_AU_E', position: 'A' });
+  m.agir({ type: 'B_VCM', numero: 2 }); m.agir({ type: 'B_CLE', cle: 'F' });
+  m.agir({ type: 'B_SERRURE', aiguille: 'F' }); m.agir({ type: 'B_LEVIER', aiguille: 'F' });
+  m.agir({ type: 'B_SEMAPHORE', voie: 'V2', position: 'ouvert' });
+  m.agir({ type: 'TRAIN_CREER', voie: 'V2', numero: '8', longueur: 50 });
+  m.agir({ type: 'TRAIN_FRANCHIR', id: train(m).id });
+  jusqua(m, () => m.lire().accidents.length > 0);
+  assert.strictEqual(m.lire().accidents[0].genre, 'deraillement');
+  assert.ok(/aiguille F/.test(m.lire().accidents[0].cause));
+});
+
 essai('réinitialisation', () => {
   const m = Moteur.creer();
   m.agir({ type: 'AMONT_ANNONCE', voie: 'V1' });

@@ -1,0 +1,27 @@
+{
+  "name": "Y-TECH Poste",
+  "short_name": "Y-TECH",
+  "description": "Poste d'aiguillage du simulateur Y-TECH (TCO de l'élève)",
+  "start_url": "tco.html",
+  "display": "fullscreen",
+  "background_color": "#17191c",
+  "theme_color": "#16181c",
+  "icons": [
+    {
+      "src": "img/icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icone.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "id": "tco"
+}
