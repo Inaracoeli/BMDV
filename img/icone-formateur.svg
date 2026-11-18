@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icône Y-TECH Formateur : l'aiguille en Y + pastille F -->
+  <rect width="64" height="64" rx="12" fill="#16181c"/>
+  <rect x="5" y="5" width="54" height="54" rx="8" fill="#bfe3e6" fill-opacity=".14" stroke="#7fb7bd" stroke-opacity=".6"/>
+  <line x1="32" y1="35" x2="45" y2="13" stroke="#d9730d" stroke-width="7"/>
+  <polyline points="32,55 32,35 19,13" fill="none" stroke="#ece9dc" stroke-width="7" stroke-linejoin="miter"/>
+  <circle cx="50" cy="50" r="11" fill="#d9730d" stroke="#16181c" stroke-width="3"/>
+  <text x="50" y="55" text-anchor="middle" fill="#fbfbf5" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="14">F</text>
+</svg>
