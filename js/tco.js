@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — liaison entre le moteur et le TCO
+// Y-TECH — liaison entre le moteur et le TCO
 // Affiche l'état du moteur sur les éléments du TCO et transforme
 // les clics de l'élève en actions.
 // ==========================================================

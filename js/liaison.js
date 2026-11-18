@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — liaison entre le TCO et l'écran formateur
+// Y-TECH — liaison entre le TCO et l'écran formateur
 // Le moteur tourne dans la page du TCO (l'hôte), pour que les trains
 // continuent même si le téléphone se met en veille. L'écran formateur
 // reçoit l'état et renvoie des actions. Deux transports :

@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — registre de cantonnement du poste de Bravo
+// Y-TECH — registre de cantonnement du poste de Bravo
 // Double page : trains impairs (voie 1) à gauche, trains pairs
 // (voie 2) à droite, les lignes se correspondent d'une page à
 // l'autre. Les mentions (Journée du…, Cessation, Reprise…)

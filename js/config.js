@@ -1,5 +1,5 @@
 // ==========================================================
-// Simulateur BMDV — configuration de la liaison distante
+// Y-TECH — configuration de la liaison distante
 // Adresse du projet Supabase et clé publique (« publishable ») : elles
 // sont faites pour être lues par le navigateur. Elles ne servent ici qu'à
 // la messagerie temps réel entre le TCO et l'écran formateur ; aucune
