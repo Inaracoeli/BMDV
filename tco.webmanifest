@@ -23,5 +23,6 @@
       "type": "image/svg+xml"
     }
   ],
-  "id": "tco"
+  "id": "tco",
+  "orientation": "landscape"
 }

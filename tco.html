@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Y-TECH — Poste B</title>
 <link rel="icon" href="img/icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -628,6 +628,12 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 <!-- Écran d'accueil : masque le TCO tant que le téléphone du formateur n'a pas répondu -->
+<!-- Téléphone tenu droit : le poste s'utilise en paysage -->
+<div id="tourner" role="alert">
+  <svg viewBox="0 0 120 120" aria-hidden="true"><g class="tel-tourne"><rect x="38" y="16" width="44" height="88" rx="8" fill="none" stroke="#ece9dc" stroke-width="5"/><circle cx="60" cy="94" r="4" fill="#ece9dc"/></g>
+    <path d="M100 60 A40 40 0 0 1 60 100" fill="none" stroke="#d9730d" stroke-width="5"/><path d="M70 92 L60 100 L70 108" fill="none" stroke="#d9730d" stroke-width="5"/></svg>
+  <p>Tourne ton téléphone</p><small>Le poste s'utilise en paysage</small>
+</div>
 <div id="accueil">
   <div class="panneau">
     <div class="marque"><img class="logo" src="img/logo-y-tech-sombre.svg" alt="Y-TECH"><span class="sous">Simulateur de poste d'aiguillage<br>Block manuel · Poste B</span></div>
@@ -654,6 +660,7 @@
 <div id="seance" data-statut="sans-code" title="Changer de séance"><span class="titre">Séance</span> <span class="code"></span> <span class="statut"></span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/sans-zoom.js"></script>
 <script src="js/config.js"></script>
 <script src="js/vendor/qrcode.js"></script>
 <script src="js/moteur.js"></script>

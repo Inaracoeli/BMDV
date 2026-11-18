@@ -19,6 +19,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; overflow-x: hidden; }
+body { overflow-x: hidden; overscroll-behavior-y: none; }
 body {
   min-height: 100vh; background: var(--fond); color: var(--texte);
   font: 16px/1.35 "Bahnschrift", "DIN Alternate", "Roboto Condensed", Arial, Helvetica, sans-serif;
@@ -248,3 +250,11 @@ details[open] summary { margin-bottom: 10px; }
 }
 @property --p { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
 @keyframes vide { to { --p: 0%; } }
+
+/* Petits écrans : tout tient sans déborder */
+@media (max-width: 380px) {
+  nav button { font-size: 12.5px; letter-spacing: 0; }
+  .ligne1 { gap: 7px; padding-left: 10px; padding-right: 6px; }
+  .marque-mini { font-size: 15px; }
+  #code-court { font-size: 11px; }
+}

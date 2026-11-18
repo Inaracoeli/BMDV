@@ -24,15 +24,41 @@
 html, body {
   margin: 0;
   height: 100%;
+  height: 100dvh;
+  overflow: hidden;
   background: #17191c;
   font-family: var(--police);
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* Le TCO occupe tout l'écran disponible, proportions conservées */
 .tco {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
 }
+
+/* ---------- Téléphone tenu droit : tourner l'écran ---------- */
+#tourner { display: none; }
+@media (orientation: portrait) and (max-width: 900px) {
+  #tourner {
+    display: flex; position: fixed; inset: 0; z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+    background: #17191c; color: #ece9dc; font-family: Arial, Helvetica, sans-serif; text-align: center;
+  }
+  #tourner svg { width: 140px; }
+  #tourner .tel-tourne { transform-origin: 60px 60px; animation: tourne 2.2s ease-in-out infinite; }
+  #tourner p { font-size: 22px; font-weight: 700; margin: 18px 0 4px; }
+  #tourner small { color: #9aa0a6; font-size: 15px; }
+}
+@keyframes tourne { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+
+
 
 /* ---------- Textes ---------- */
 .tco text   { font-family: var(--police); }
@@ -179,7 +205,7 @@ body.verrouille .tco, body.verrouille #seance, body.verrouille #toast { visibili
 #accueil .etat.erreur { color: #ffb3ad; }
 #accueil .etat.erreur::before { color: #f0281c; animation: none; }
 @keyframes clignote { 50% { opacity: .2; } }
-@media (max-width: 760px) { #accueil .corps-accueil { grid-template-columns: 1fr; justify-items: center; gap: 24px; } #accueil .qr { width: 220px; height: 220px; } }
+@media (max-width: 760px) and (min-height: 521px) { #accueil .corps-accueil { grid-template-columns: 1fr; justify-items: center; gap: 24px; } #accueil .qr { width: 220px; height: 220px; } }
 
 #toast.visible { opacity: 1; transform: translate(-50%, 0); }
 
@@ -188,6 +214,7 @@ body.verrouille .tco, body.verrouille #seance, body.verrouille #toast { visibili
   width: min(1500px, 96vw); max-height: 92vh; padding: 0 22px 18px; border: 2px solid #0f1012; border-radius: 10px;
   background: #f7f4e4; color: #2b2f33; font: 15px/1.4 Arial, Helvetica, sans-serif;
 }
+@media (max-height: 520px) { .fenetre, dialog { max-height: 96dvh; padding-left: 12px; padding-right: 12px; } }
 .fenetre::backdrop { background: rgba(10, 12, 14, .7); }
 .fenetre header {
   position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
@@ -409,3 +436,23 @@ table.page td:not(.heure):not(.obs) { color: #12317a; }
 #appel p { margin: 18px 22px; font-size: 20px; }
 #appel button { display: block; margin: 0 22px 18px auto; font: bold 16px Arial, sans-serif; padding: 8px 22px; border-radius: 6px; border: 1px solid #a85608; background: #d9730d; color: #fff; cursor: pointer; }
 body.verrouille #appel { display: none; }
+
+/* ---------- Écrans bas (téléphone en paysage) ---------- */
+@media (max-height: 520px) {
+  #accueil .panneau { width: min(760px, 94vw); }
+  #accueil .marque { margin-bottom: 12px; padding-bottom: 8px; }
+  #accueil .marque .logo { height: 48px; }
+  #accueil .marque .sous { font-size: 12px; }
+  #accueil .corps-accueil { grid-template-columns: auto 1fr; gap: 24px; }
+  #accueil .qr { width: min(46vh, 210px); height: min(46vh, 210px); padding: 12px; border-radius: 14px; }
+  #accueil h1 { font-size: 20px; margin-bottom: 8px; }
+  #accueil .etapes { margin-bottom: 10px; }
+  #accueil .etapes li { font-size: 14px; margin: 6px 0; gap: 10px; }
+  #accueil .etapes li::before { width: 24px; height: 24px; font-size: 13px; }
+  #accueil .secours { font-size: 12px; }
+  #accueil .secours b { font-size: 20px; margin-top: 2px; }
+  #accueil .etat { margin-top: 8px; font-size: 13px; }
+  #accueil .actions { margin-top: 8px; }
+  #seance { font-size: 10px; padding: 2px 6px; bottom: 4px; right: 4px; opacity: .75; }
+  #seance .code { font-size: 10px; }
+}

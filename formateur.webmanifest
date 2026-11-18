@@ -23,5 +23,6 @@
       "type": "image/svg+xml"
     }
   ],
-  "id": "formateur"
+  "id": "formateur",
+  "orientation": "portrait"
 }

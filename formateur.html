@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Y-TECH — Formateur</title>
 <link rel="icon" href="img/icone-formateur.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="img/formateur-apple-touch-icon.png">
@@ -58,7 +58,7 @@
   <div class="ligne1">
     <span class="marque-mini"><img src="img/icone-formateur.svg" alt="">Y-TECH</span>
     <span id="code-court"></span>
-    <span id="liaison" class="hors-ligne">TCO non connecté</span>
+    <span id="liaison" class="hors-ligne">TCO absent</span>
     <button type="button" id="menu" aria-label="Menu de la séance">⋯</button>
   </div>
   <div id="alertes"></div>
@@ -154,6 +154,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/sans-zoom.js"></script>
 <script src="js/config.js"></script>
 <script src="js/moteur.js"></script>
 <script src="js/liaison.js"></script>
