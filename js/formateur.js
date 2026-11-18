@@ -6,6 +6,7 @@
 const FormateurApp = { demarrer(moteur, acces) {
   if (FormateurApp.demarre) return;
   FormateurApp.demarre = true;
+  if (typeof Accident !== 'undefined') Accident.brancher(moteur);
   const $ = (id) => document.getElementById(id);
   const creer = (balise, classe, texte) => {
     const e = document.createElement(balise);

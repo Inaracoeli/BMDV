@@ -134,9 +134,36 @@ const Sonnerie = (function () {
     } catch (e) { /* pas de son disponible */ }
   }
 
+  // Fracas d'accident : choc sourd, crissement métallique, ferraille qui retombe
+  function fracas() {
+    try {
+      contexte();
+      const sr = ctx.sampleRate;
+      const n = Math.round(2.2 * sr);
+      const b = ctx.createBuffer(1, n, sr);
+      const d = b.getChannelData(0);
+      let bruit = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr;
+        bruit = 0.6 * bruit + 0.4 * (Math.random() * 2 - 1);
+        const choc = Math.sin(2 * Math.PI * (55 - 20 * t) * t) * Math.exp(-t * 4) * 1.2;
+        const crisse = Math.sin(2 * Math.PI * (2400 + 600 * Math.sin(t * 9)) * t) * Math.exp(-((t - 0.25) ** 2) / 0.03) * 0.25;
+        const ferraille = bruit * Math.exp(-t * 2.2) * (0.5 + 0.5 * Math.sin(t * 37) ** 2);
+        d[i] = Math.max(-1, Math.min(1, (choc + crisse + ferraille) * Math.min(1, t / 0.003)));
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = b;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.6;
+      source.connect(gain).connect(ctx.destination);
+      source.start();
+    } catch (e) { /* pas de son disponible */ }
+  }
+
   return {
     clic,
     gong,
+    fracas,
     // regler({ annonce: true|false, reddition: true|false })
     regler(voulu) {
       Object.keys(TIMBRES).forEach((nom) => (voulu[nom] ? demarrer(nom) : arreter(nom)));
